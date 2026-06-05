@@ -2,7 +2,6 @@
 
 <img src="openjnd.png" alt="OpenJND" width="620"/>
 
-# OpenJND
 
 **A Cross-Language Reference Library for Visual Just-Noticeable-Difference Estimation**
 
