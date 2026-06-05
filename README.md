@@ -10,8 +10,10 @@
 [![Python](https://img.shields.io/badge/Python-supported-3776AB?logo=python&logoColor=white)](#)
 [![C++](https://img.shields.io/badge/C%2B%2B-supported-00599C?logo=cplusplus&logoColor=white)](#)
 [![Methods](https://img.shields.io/badge/methods-8-blueviolet)](#method-index)
-[![Mirror](https://img.shields.io/badge/mirror-OpenI-success)](https://openi.pcl.ac.cn/OpenJND/OpenJND)
+[![Mirror](https://img.shields.io/badge/mirror-OpenI-success)](https://openi.pcl.ac.cn/OpenDatasets/OpenJND?lang=en-US)
 [![Issues](https://img.shields.io/badge/issues-welcome-orange.svg)](https://github.com/Terriao/OpenJND/issues)
+
+**🔗 GitHub:** <https://github.com/Terriao/OpenJND>  ·  **🪞 OpenI Mirror:** <https://openi.pcl.ac.cn/OpenDatasets/OpenJND?lang=en-US>
 
 </div>
 
@@ -290,7 +292,7 @@ We deliberately do *not* report a single "winner" metric: JND maps are intermedi
 
 ## Qualitative comparison
 
-The figure below (`jnd_visualization.PNG`) tiles the JND maps produced by all eight methods on the same `Actor` input. A few reading notes:
+The figure below tiles the JND maps produced by all eight methods on the same `Actor` input. A few reading notes:
 
 - Bottom-up pixel-domain models tend to agree on the *shape* of the map but disagree on the *amplitude* in edge and texture regions.
 - The two transform-domain bottom-up models (Zhang, Jia) carry the imprint of the underlying block grid by construction — a feature, not a bug, when the downstream consumer is a block-based codec.
@@ -302,7 +304,11 @@ The figure below (`jnd_visualization.PNG`) tiles the JND maps produced by all ei
 
 ## Runtime analysis
 
-Each method is run in MATLAB, Python, and C++ on the same hardware and the same image pool; average per-image runtime is reported in `running_time.PNG`. The qualitative findings:
+Each method is run in MATLAB, Python, and C++ on the same hardware and the same image pool. The figure below shows the average per-image runtime for each (method × language) pair.
+
+<p align="center"><img src="running_time.PNG" alt="Runtime comparison across MATLAB, Python, and C++" width="720"/></p>
+
+The qualitative findings:
 
 | Pattern | Methods | Why |
 |---------|---------|-----|
@@ -452,7 +458,7 @@ Source code is released under the **MIT License**. Individual method subdirector
 
 ## Acknowledgements
 
-OpenJND would not exist without the authors of the eight methods we re-implement here, who made their reference code available and patiently answered our reproduction questions. We thank the MATLAB, NumPy/SciPy, and OpenCV communities for the numerical primitives this work stands on, and Peng Cheng Laboratory together with the OpenI platform for compute resources and a public mirror of the repository.
+OpenJND would not exist without the authors of the eight methods we re-implement here, who made their reference code available and patiently answered our reproduction questions. We thank the MATLAB, NumPy/SciPy, and OpenCV communities for the numerical primitives this work stands on, and **Peng Cheng Laboratory** together with the **[OpenI](https://openi.pcl.ac.cn/OpenDatasets/OpenJND?lang=en-US)** platform for compute resources and a public mirror of the repository.
 
 We also acknowledge the broader psychophysics and HVS-modelling traditions — going back decades — that made any of this possible.
 
