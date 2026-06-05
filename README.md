@@ -291,19 +291,19 @@ We deliberately do *not* report a single "winner" metric: JND maps are intermedi
 
 ## Qualitative comparison
 
-The figure below (`figures/jnd_grid.png`) tiles the JND maps produced by all eight methods on the same `Actor` input. A few reading notes:
+The figure below (`jnd_visualization.PNG`) tiles the JND maps produced by all eight methods on the same `Actor` input. A few reading notes:
 
 - Bottom-up pixel-domain models tend to agree on the *shape* of the map but disagree on the *amplitude* in edge and texture regions.
 - The two transform-domain bottom-up models (Zhang, Jia) carry the imprint of the underlying block grid by construction — a feature, not a bug, when the downstream consumer is a block-based codec.
 - Jiang et al.'s top-down map looks qualitatively similar to the bottom-up consensus despite being derived without explicit masking decomposition — evidence that the two philosophies converge on broadly consistent perceptual budgets.
 
-<p align="center"><img src="figures/jnd_grid.png" alt="JND maps comparison" width="800"/></p>
+<p align="center"><img src="jnd_visualization.PNG" alt="JND maps comparison" width="800"/></p>
 
 ---
 
 ## Runtime analysis
 
-Each method is run in MATLAB, Python, and C++ on the same hardware and the same image pool; average per-image runtime is reported in `figures/runtime.png`. The qualitative findings:
+Each method is run in MATLAB, Python, and C++ on the same hardware and the same image pool; average per-image runtime is reported in `running_time.PNG`. The qualitative findings:
 
 | Pattern | Methods | Why |
 |---------|---------|-----|
