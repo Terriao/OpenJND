@@ -13,7 +13,9 @@
 [![Mirror](https://img.shields.io/badge/mirror-OpenI-success)](https://openi.pcl.ac.cn/OpenDatasets/OpenJND?lang=en-US)
 [![Issues](https://img.shields.io/badge/issues-welcome-orange.svg)](https://github.com/Terriao/OpenJND/issues)
 
-**🔗 GitHub:** <https://github.com/Terriao/OpenJND>  ·  **🪞 OpenI Mirror:** <https://openi.pcl.ac.cn/OpenDatasets/OpenJND?lang=en-US>
+**🔗 GitHub:** <https://github.com/Terriao/OpenJND>
+
+**🪞 OpenI Mirror:** <https://openi.pcl.ac.cn/OpenDatasets/OpenJND?lang=en-US>
 
 </div>
 
