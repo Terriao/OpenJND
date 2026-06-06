@@ -1,6 +1,6 @@
 # Contributing to OpenJND
 
-Thank you for considering a contribution to OpenJND. This document explains how to propose changes, add new methods, and what we expect from a pull request. The guidelines align with the standards of the [ACM Multimedia 2026 Open Source Software Track](https://2026.acmmm.org/site/call-open-source.html), under which OpenJND is being submitted.
+Thank you for considering a contribution to OpenJND. This document explains how to propose changes, add new methods, and what we expect from a pull request. 
 
 ## Table of contents
 
@@ -47,8 +47,8 @@ Yang et al/
 Zhang et al/
 Jia et al/
 Liu et al/
-Wu et al (TIP)/      # pattern complexity (TIP 2017)
-Wu et al (TMM)/      # free-energy (TMM 2013)
+Wu et al (TIP)/      # pattern complexity
+Wu et al (TMM)/      # free-energy
 Jiang et al/
 ```
 
@@ -68,7 +68,7 @@ The fastest path to a new method is to copy the closest cousin in the catalogue 
             optional config dictionary
    OUTPUT : JND map of the same H × W shape (float)
 ```
-3. **Match the original paper's reported numbers** on a public test image (Lena, Kodak, or one of the images shipped in `test_data/`). Document the deviation if any.
+3. **Match the original paper's reported numbers** on a public test image (Actor, Lena, Kodak, or one of the images shipped in `test_data/`). Document the deviation if any.
 4. **Add a method-specific README** in the new directory containing:
    - One-paragraph background and motivation
    - The unified interface signature in your language
@@ -87,7 +87,6 @@ We do not enforce strict style across all three languages, but consistency withi
 ### Python
 - Target Python 3.8 or above.
 - Stick to the standard scientific stack: `numpy`, `scipy`, `opencv-python`, `Pillow`. Avoid uncommon or commercial dependencies.
-- Public functions take `numpy.ndarray` and return `numpy.ndarray`. Keep file I/O outside the JND function itself.
 - Document parameters and return shapes in the docstring.
 
 ### MATLAB
