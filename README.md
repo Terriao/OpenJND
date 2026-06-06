@@ -113,7 +113,7 @@ The lineage is **converging, not branching**: later models do not invalidate ear
 |---|--------|---------|--------|---------------------|:------:|:------:|:---:|
 | 5.1 | [Chou & Li](#51-chou--li) · [📂](Chou%20and%20Li) | Foundational | Pixel | Luminance adaptation + texture masking; introduces PSPNR | ● | ◐ | ◐ |
 | 5.2 | [Yang et al.](#52-yang-et-al) · [📂](Yang%20et%20al) | Temporal extension · NAMM | Pixel · YCbCr | NAMM combiner with edge/non-edge weighting and temporal pathway | ● | ◐ | ◐ |
-| 5.3 | [Zhang et al.](#53-zhang-et-al) · [📂](Zhang%20et%20al) | Subband refinement | Transform | Refined luminance curve + block-classified CM | ● | ◐ | ◐ |
+| 5.3 | [Zhang et al.](#53-zhang-et-al) · [📂](Zhang%20et%20al) | Subband refinement | Transform (DCT) | Parabolic LA + block-classified CM (PLAIN/EDGE/TEXTURE) | ● | ◐ | ◐ |
 | 5.4 | [Jia et al.](#54-jia-et-al) · [📂](Jia%20et%20al) | DCT formulation | Transform (DCT) | Spatio-temporal CSF with eye-movement compensation | ◐ | ◐ | — |
 | 5.5 | [Liu et al.](#55-liu-et-al) · [📂](Liu%20et%20al) | Decomposition era | Pixel | TV decomposition separating edge and texture masking | ● | ◐ | ◐ |
 | 5.6 | [Wu et al. (free energy)](#56-wu-et-al-free-energy) · [📂](Wu%20et%20al%20%28TMM%29) | Cognitive-inspired | Pixel | AR prediction splits ordered vs. disordered regions | ● | — | — |
@@ -182,17 +182,17 @@ Behaviour: smoother handling of edges than the foundational max-rule; recovers c
 
 ### 5.3 Zhang et al.
 
-> **Subband refinement** · refined luminance · block-classified contrast masking
+> **DCT-domain subband refinement** · parabolic luminance adaptation · block-classified contrast masking
 > 🔗 Subproject: <https://github.com/Terriao/OpenJND/tree/main/Zhang%20et%20al>
 
-Addresses two long-standing weaknesses of subband JND modelling: an inaccurate luminance-adaptation curve at very dark and very bright extremes, and an over-aggressive contrast-masking gain in edge blocks. A new luminance-adaptation formula and an explicit **block classification** step (edge / texture / smooth) scale the masking gain differently per category. The resulting JND profile is markedly more conservative near edges, eliminating a class of visible artefacts that earlier subband coders produced.
+Builds on the Ahumada–Peterson spatial-CSF model and Watson's DCTune, and sharpens two specific weaknesses of those estimators. The luminance-adaptation base threshold is recast as a **parabolic** two-branch function of the block DC coefficient — higher in very dark *and* very bright regions, lowest around mid-grey — which mainly improves accuracy below gray level 128 where DCTune is least faithful. The contrast-masking elevation factor is then conditioned on an explicit **block classification** step (PLAIN / EDGE / TEXTURE) derived from the texture energy of the medium- and high-frequency DCT bands; LF/MF coefficients of EDGE blocks are excluded from intra-band masking, which is precisely what prevents the JND over-estimation that DCTune produces around edges. The same JND profile drives a perceptual distortion metric (subband error normalised by the per-coefficient threshold) and a JPEG-compatible quantizer.
 
-Behaviour: the JND map carries the imprint of the block grid by construction; suitable for codecs that already operate block-wise.
+Behaviour: the map carries the imprint of the 8×8 block grid by construction — well-matched to block-based codecs (JPEG, HEVC, AVS), and noticeably better aligned with subjective scores than DCTune in dark regions and around object boundaries.
 
 ```bibtex
 @article{zhang2005improved,
   title   = {Improved estimation for just-noticeable visual distortion},
-  author  = {Zhang, Xiaohui and Lin, Weisi and Xue, Ping},
+  author  = {Zhang, X. H. and Lin, W. S. and Xue, P.},
   journal = {Signal Processing},
   volume  = {85}, number = {4}, pages = {795--808}, year = {2005}
 }
