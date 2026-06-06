@@ -8,30 +8,57 @@ This directory contains the OpenJND implementation of Zhang et al.'s DCT-domain 
 
 ## What the model does
 
-The JND for each DCT coefficient is expressed, as in DCTune, as the product of a **base threshold** `t_b` and an **elevation factor** `a_e`:
+For each 8×8 block, the JND of each DCT coefficient is expressed, as in DCTune, as the product of a **base threshold** `t_b` (spatial CSF × luminance adaptation) and an **elevation factor** `a_CM` (contrast masking), with a final global scale `tfac`:
 
 ```
-t_JND(n1, n2, i, j) = t_b(n1, n2, i, j) · a_e(n1, n2, i, j)
+t_JND(n1, n2, i, j) = tfac · t_ij(i, j) · a_lum(n1, n2) · a_CM(n1, n2, i, j),    tfac = 0.3
 ```
 
-where `(n1, n2)` indexes the N×N block (N = 8) and `(i, j)` indexes the DCT subband. The base threshold accounts for the spatial CSF and luminance adaptation; the elevation factor accounts for contrast masking in the block's neighbourhood. The two contributions Zhang et al. add are:
+The four building blocks:
 
-1. **Parabolic luminance adaptation.** Earlier models assumed Weber–Fechner's law (or its power-law form), which over-simplifies real image viewing. The HVS visibility threshold against gray level is in fact approximately parabolic — higher in very dark *and* very bright regions, lowest at mid-grey. Driven by the block DC coefficient `C(n1, n2, 0, 0)`, the luminance-adaptation factor is a two-branch function around the mid-point `GN/2`:
+1. **Spatial CSF (Ahumada–Peterson 1992).** Per-coefficient base thresholds `t_ij(i, j)` are computed from spatial frequency, orientation, and an assumed mean display luminance `LB`. The CSF parameters used by the reference implementation are the standard Ahumada–Peterson fit:
 
 ```
-   a_lum = k1 · (1 − 2C/GN)^λ1 + 1     if C ≤ GN/2
-         = k2 · (2C/GN − 1)^λ2 + 1     otherwise
+   LT = 13.45,  S0 = 94.7,  aT = 0.649,        % threshold lifting
+   f0 = 6.78,   af = 0.182, Lf = 300,           % peak-frequency curve
+   K0 = 3.125,  aK = 0.0706, LK = 300,          % bandwidth
+   s  = 0.25,   r  = 0.6,    LB = 65 cd/m²      % overall scale & orientation
 ```
 
-   with `k1 = 2, k2 = 0.8, λ1 = 3, λ2 = 2`. The main difference from DCTune appears below gray level 128 — i.e. the dark-region fix.
+   An orientation correction `1 / (r + (1 − r) · cos²(θ))` (`r = 0.6`) is applied to off-axis DCT frequencies. The DC threshold is set to `min(t_ij(0,1), t_ij(1,0))` to avoid a singular value at zero frequency.
 
-2. **Block classification for contrast masking.** Every DCT block is assigned to one of three classes in descending order of HVS sensitivity — **PLAIN**, **EDGE**, **TEXTURE** — using texture energy `TexE = M + H` (sums of absolute DCT coefficients in the medium- and high-frequency groups) and edge indicators `E1 = (L+M)/H` and `E2 = L/M`. Because the HVS is acutely sensitive at luminance edges, EDGE blocks get a lower elevation factor: the LF and MF coefficients of an EDGE block are **excluded from intra-band masking evaluation**, which is exactly what prevents the JND over-estimation that DCTune produces around edges.
+2. **Parabolic luminance adaptation.** Driven by the block DC coefficient `C(n1, n2, 0, 0)`, the LA factor is a two-branch function around `C00 = 1024`:
 
-The companion sections of the paper show how the resulting JND drives a perceptual distortion metric (subband error normalised by `t_JND`, pooled via Minkowski distance) and a JND-aided JPEG-compatible quantizer.
+```
+   a_lum = { k_T · (1 − C/C00)^a_T + 1     if C ≤ C00
+           { k_Q · (C/C00 − 1)^a_Q + 1     otherwise
+```
+
+   with `k_T = 2, a_T = 3, k_Q = 0.8, a_Q = 2`. This is higher in very dark *and* very bright regions, lowest around mid-grey — the parabolic correction that mainly improves accuracy below gray level 128 where DCTune is least faithful.
+
+3. **Block classification.** Every 8×8 block is assigned to PLAIN / EDGE / TEXTURE from sums of absolute DCT coefficients in the low-frequency `lowf`, edge-frequency `edg` and high-frequency `highf` groups, with the empirical thresholds from the paper:
+
+   | Symbol | Value | Role |
+   |--------|-------|------|
+   | u1, u2 | 125, 900 | Cutoffs on `edg + highf` for PLAIN / mixed / TEXTURE |
+   | k1 | 290 | Secondary PLAIN-vs-TEXTURE cutoff in the mixed range |
+   | a1, b1 | 6.9, 4.8 | High-energy edge ratios (`a1 = 2.3·3, b1 = 1.6·3`) |
+   | a2, b2 | 1, 1.6 | Low-energy edge ratios |
+   | y1, y | 2.0, 16 | Cutoffs on `(lowf + edg) / highf` |
+
+4. **Contrast masking with block-class-dependent elevation.** Inside TEXTURE blocks, each AC coefficient picks up an intra-band masking factor `max(1, |C / t_b|^0.36)` further multiplied by a texture-amplification `TexMask`:
+
+```
+   TEXTURE :  TexMask = 1 + (F_maxT − 1) · (TexE − 290) / (1800 − 290),     F_maxT = 2.5
+   EDGE    :  TexMask = 1.125  if EdgE ≤ 400 else 1.25
+   PLAIN   :  TexMask = 1
+```
+
+   Crucially, for EDGE blocks the LF and MF coefficients are **excluded from intra-band masking** — their `a_CM` is held at the per-block `TexMask` value only — which is exactly what prevents the JND over-estimation that DCTune produces around edges. The DC coefficient has `a_CM = 1` in all blocks.
 
 ## Behaviour of the JND map
 
-- The map is per-coefficient in the DCT domain and carries the imprint of the 8×8 block grid by construction — a feature, not a bug, when the downstream consumer is a block-based codec.
+- The map is per-coefficient in the DCT domain and carries the imprint of the 8×8 block grid by construction — appropriate for block-based codecs.
 - EDGE blocks receive lower budgets than TEXTURE blocks of comparable energy, because their LF/MF bands are kept out of the masking elevation.
 - Better matched to subjective scores than DCTune, especially in dark regions and around object boundaries (validated by subjective tests on Actor and Lena, and in JPEG-style compression).
 
@@ -39,21 +66,19 @@ The companion sections of the paper show how the resulting JND drives a perceptu
 
 ```
 Zhang et al/
-├── MATLAB/          # reference implementation
-├── Python/          # ported implementation
-├── C++/             # ported implementation (zip)
+├── MATLAB/          # reference implementation (main.m)
+├── Python/          # ported implementation (main.py)
 └── paper.pdf        # original paper
 ```
 
 ## Unified calling convention
 
 ```
-INPUT  : grayscale image  (uint8 / float, H × W)
-         optional config struct (block_size, classification_thresholds, viewing_distance)
-OUTPUT : JND map  (float)
+INPUT  : grayscale image  (uint8 / float, H × W; H and W are auto-cropped to multiples of 8)
+OUTPUT : JND map  (float, H' × W' where H', W' are the post-crop dimensions)
 ```
 
-Internally the input is partitioned into non-overlapping 8×8 blocks, each block is DCT-transformed and classified (PLAIN / EDGE / TEXTURE), and a per-coefficient threshold `t_JND(n1, n2, i, j)` is derived from the base threshold and elevation factor.
+Internally the input is partitioned into non-overlapping 8×8 blocks, each block is DCT-transformed and classified (PLAIN / EDGE / TEXTURE), and a per-coefficient threshold is derived from the base threshold and elevation factor. The output is the spatial-domain assembly of the per-coefficient thresholds (one threshold value per pixel position).
 
 ## Minimal usage example
 
@@ -61,40 +86,49 @@ Internally the input is partitioned into non-overlapping 8×8 blocks, each block
 ```matlab
 addpath('MATLAB');
 img = imread('../test_data/lena.png');
-jnd = zhang_jnd(img);
-imshow(mat2gray(jnd));
+if size(img, 3) == 3, img = rgb2gray(img); end
+jnd = JND_dct(img);
+imagesc(jnd); colormap gray; colorbar;
 ```
 
 **Python**
 ```bash
 cd Python
+pip install numpy scipy imageio matplotlib
 python main.py
 ```
 
-**C++**
-```bash
-cd C++
-unzip cpp_source.zip -d build_src
-cd build_src && cmake -S . -B build && cmake --build build -j
-./build/zhang ../test_data/lena.png
+Programmatic call:
+```python
+from main import JND_dct
+import imageio.v2 as imageio
+img = imageio.imread('../test_data/lena.png', mode='L')
+jnd = JND_dct(img)
 ```
 
 ## Default parameters
 
 | Parameter | Default | Meaning |
 |-----------|---------|---------|
-| `N` (block size) | 8 | DCT block side length |
-| `k1`, `k2` | 2, 0.8 | Amplitude constants of the dark / bright LA branches |
-| `λ1`, `λ2` | 3, 2 | Exponents of the dark / bright LA branches |
-| `m1`, `m2`, `m3` | 125, 290, 900 | Texture-energy thresholds for block classification |
-| `a1`, `b1` | 7, 5 | Edge-indicator thresholds in classification |
-| `k` | 0.1 | Scaling of edge thresholds for high-`TexE` blocks |
-| `u` | 16 | `E1` cutoff for the EDGE class |
-| `δ1`, `δ2` | 1.25, 1.125 | Inter-band masking factors (TEXTURE / EDGE) |
-| `ε` | 0.36 | Intra-band masking exponent |
-| `viewing_distance` | 50 cm | Distance used in the spatial-CSF (per the paper's subjective setup) |
+| `bsize` | 8 | DCT block side length |
+| `wx, wy` | 0.0298, 0.0298 | Horizontal / vertical pixel size in degrees of visual angle |
+| `tfac` | 0.3 | Global JND scaler applied at the very end |
+| `Lmax, Lmin, M` | 130, 0, 256 | Display luminance range and gray-level resolution |
+| `LB` | 65 cd/m² | Assumed mean display luminance |
+| `r` (orientation) | 0.6 | Orientation-correction shape constant |
+| `s` (CSF scale) | 0.25 | Spatial-CSF overall scale |
+| `LT, S0, aT` | 13.45, 94.7, 0.649 | CSF threshold-lifting parameters |
+| `f0, af, Lf` | 6.78, 0.182, 300 | CSF peak-frequency parameters |
+| `K0, aK, LK` | 3.125, 0.0706, 300 | CSF bandwidth parameters |
+| `k_T, a_T, k_Q, a_Q, C00` | 2, 3, 0.8, 2, 1024 | Parabolic luminance-adaptation parameters |
+| `u1, u2, k1` | 125, 900, 290 | Block-classification thresholds on `edg + highf` |
+| `a1, b1` | 6.9, 4.8 | High-energy edge ratios in block classification |
+| `a2, b2, y1, y` | 1, 1.6, 2.0, 16 | Low-energy edge ratios in block classification |
+| `F_maxT` | 2.5 | Maximum texture-masking factor (TEXTURE blocks) |
+| EDGE-block factor | 1.125 / 1.25 | Below / above 400 in edge energy `EdgE = edg + lowf` |
+| Intra-band exponent | 0.36 | `max(1, |C / t_b|^0.36)` inside TEXTURE blocks |
 
-All defaults reproduce the numbers reported in the original publication.
+All defaults reproduce the configuration used in the reference implementation.
 
 ## Citation
 
