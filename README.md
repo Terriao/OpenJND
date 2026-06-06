@@ -223,7 +223,7 @@ Behaviour: when applied to a frame pair with translation, the JND map cleanly re
 
 Earlier contrast-masking estimators tend to lump strong gradients into a single "high-frequency" bucket, so textured regions are routinely *misclassified as edges* and assigned an artificially low budget. Liu et al. propose a clean fix: split the image into a **structural component** (used for edge masking) and a **textural component** (used for texture masking), then estimate the two masking terms from the two components independently and combine them with `W_e = 0.7`, `W_t = 1.4` so that texture masking weighs heavier than edge masking.
 
-Behaviour: textures recover their rightful, larger JND budget; edges remain protected. The cost is a non-trivial decomposition step — the MATLAB reference uses Wotao Yin's TV-L¹ parametric-max-flow solver (Windows-pre-compiled `.mexw64`); the Python port substitutes a Gaussian-blur surrogate to keep the dependency footprint small.
+Behaviour: textures recover their rightful, larger JND budget; edges remain protected. The cost is a non-trivial decomposition step — the MATLAB reference uses Wotao Yin's TV-L¹ parametric-max-flow solver; the Python port substitutes a Gaussian-blur surrogate to keep the dependency footprint small.
 
 ```bibtex
 @article{liu2010just,
@@ -492,9 +492,6 @@ The classic JND literature is luminance-channel-first, and a grayscale-first cat
 
 **What is PSPNR and why is it not just PSNR?**
 PSPNR (introduced by Chou & Li) counts only distortion above the per-pixel JND threshold. Two images can have identical PSNR yet very different PSPNR if one hides its distortion in regions of high JND budget.
-
-**Is MATLAB required?**
-No. Every method except the MATLAB-only Wu (free energy) also has a Python implementation that runs on the open-source SciPy / NumPy / OpenCV stack. **A platform caveat for Liu et al.:** the MATLAB port pulls in a Windows-pre-compiled MEX library; the Python port has no such dependency and runs on all platforms.
 
 **Can I cite OpenJND independently of any specific method?**
 Yes — see [Citation](#citation). Please *also* cite the original paper for each method you use.
