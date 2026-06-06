@@ -33,7 +33,9 @@ The library is built around three observations the field has tolerated for too l
 
 OpenJND addresses all three by re-implementing each method against a fixed I/O contract, evaluating the eight models on the same input, and documenting both the *idea* and the *cost* of every model.
 
-> The library accompanies the paper *"OpenJND: A Comprehensive Open Source Library for Just Noticeable Difference"* (ACM MM 2026, under review). See [Citation](#citation).
+> **Open-source dependency note.** Every method in OpenJND has a Python implementation that runs end-to-end on the open-source SciPy / NumPy / OpenCV stack with **no MATLAB required**. The MATLAB and C++ ports are provided alongside as authoritative reference implementations and as building blocks for performance-sensitive integrations.
+
+> The library accompanies the paper *"OpenJND: A Comprehensive Open Source Library for Just Noticeable Difference"* (ACM MM 2026, Open Source Software Track, under review). See [Citation](#citation).
 
 ---
 
@@ -233,7 +235,7 @@ Behaviour: textures recover their rightful, generous JND budget; edges remain pr
 
 A conceptually distinct entry in the catalogue. Drawing on the free-energy framework from theoretical neuroscience, the HVS is modelled as attempting to *predict* the orderly content of an image; whatever cannot be predicted is **disordered** content that the eye tolerates much more freely. An **autoregressive predictor** fits the image, the residual is treated as disorder, and JND is computed separately for ordered and disordered components.
 
-Behaviour: substantially elevated JND in disordered regions (foliage, fabric, noise), while ordered regions stay conservative. Currently MATLAB-only in this repository.
+Behaviour: substantially elevated JND in disordered regions (foliage, fabric, noise), while ordered regions stay conservative. Currently MATLAB-only in this repository (see directory `Wu et al (TMM)`).
 
 ```bibtex
 @article{wu2013just,
@@ -248,7 +250,7 @@ Behaviour: substantially elevated JND in disordered regions (foliage, fabric, no
 
 > **Pattern-aware** · orientation diversity
 
-Contrast alone is a poor predictor of masking strength: two regions with identical contrast can mask very different amounts of distortion depending on whether their local patterns are *regular* (e.g. a brick wall) or *irregular* (e.g. crumpled fabric). **Pattern complexity** is quantified here as the diversity of local orientations and combined with luminance contrast in a new spatial-masking estimator.
+Contrast alone is a poor predictor of masking strength: two regions with identical contrast can mask very different amounts of distortion depending on whether their local patterns are *regular* (e.g. a brick wall) or *irregular* (e.g. crumpled fabric). **Pattern complexity** is quantified here as the diversity of local orientations and combined with luminance contrast in a new spatial-masking estimator. Code lives in `Wu et al (TIP)`.
 
 Behaviour: irregular-pattern regions receive a higher JND budget than regular-pattern regions of the same contrast. A natural successor to texture-masking models for high-resolution natural imagery.
 
@@ -284,12 +286,12 @@ Behaviour: low budgets near edges (where humans really do notice distortion earl
 
 To keep the comparison reproducible:
 
-- **Image pool.** The 24 colour images of the **Kodak** photographic dataset, converted to grayscale, together with three classical grayscale test images (`Lena`, `Actor`, `Lighthouse`). All images are resized to 512 × 512 when their native resolution differs.
+- **Image pool.** The 24 colour images of the **Kodak** photographic dataset, converted to grayscale, together with three classical grayscale test images (`Lena`, `Actor`, `Lighthouse`). All images are resized to 512 × 512 when their native resolution differs. The bundled `test_data/` directory contains enough imagery to reproduce every figure in this README.
 - **Aggregation.** Runtime is reported as the **mean over the full pool**, on a fixed hardware platform.
 - **Visualisation.** A single image — grayscale `Actor` (512 × 512) — is shown for every method, side by side, so the reader can compare maps at a glance.
 - **Defaults.** Every method is run with the parameter settings reported in its original publication.
 
-We deliberately do *not* report a single "winner" metric: JND maps are intermediate signals, and the right yardstick depends on the downstream application (compression bitrate, watermark robustness, IQA correlation, …). Application-specific benchmarks live in `benchmarks/` and can be invoked individually.
+We deliberately do *not* report a single "winner" metric: JND maps are intermediate signals, and the right yardstick depends on the downstream application (compression bitrate, watermark robustness, IQA correlation, …).
 
 ---
 
@@ -339,11 +341,26 @@ A rough decision tree for downstream users:
 | IQA / perceptual quality metric design | Jiang (top-down) for alignment with subjective tests |
 | Teaching / first reproducible baseline | Chou (the most thoroughly documented foundational model) |
 
-When in doubt, run **all eight** through `benchmarks/jnd_grid.py` on a few of your own images and inspect the maps. Visual inspection at this stage saves a lot of downstream confusion.
+When in doubt, run the methods you are considering on a few of your own images and inspect the maps. Visual inspection at this stage saves a lot of downstream confusion.
 
 ---
 
 ## Getting started
+
+OpenJND is organised as **one top-level directory per method**:
+
+```
+Chou and Li/
+Yang et al/
+Zhang et al/
+Jia et al/
+Liu et al/
+Wu et al (TIP)/      # pattern complexity
+Wu et al (TMM)/      # free-energy
+Jiang et al/
+```
+
+Each method directory contains the available language ports (MATLAB / Python / C++) and a method-specific entry point.
 
 ### Clone
 
@@ -352,32 +369,44 @@ git clone https://github.com/Terriao/OpenJND.git
 cd OpenJND
 ```
 
-### MATLAB
-
-```matlab
-addpath(genpath('matlab'));
-img = imread('test_data/actor.png');
-jnd = chou(img);            % any of: chou, yang, zhang, jia, liu, wu_fe, wu_pc, jiang
-imshow(jnd, []);
-```
-
 ### Python
 
+A typical Python run looks like this — example shown for Wu et al. (pattern complexity):
+
 ```bash
-cd python
-pip install -r requirements.txt
-python -m openjnd.cli --method wu_pc --input ../test_data/actor.png --output wu_pc_actor.png
+cd "Wu et al (TIP)/Python"
+pip install numpy scipy opencv-python Pillow matplotlib
+python main.py
 ```
+
+Other Python ports follow the same pattern: open the method directory, install the standard scientific Python stack, run the entry script. Each method directory contains its own README with method-specific parameters.
+
+### MATLAB
+
+Open MATLAB, navigate to a method directory, and call its top-level function. For example:
+
+```matlab
+cd 'Chou and Li/MATLAB'
+img  = imread('../../test_data/lena.png');
+jnd  = chou_li_jnd(img);   % function name follows the method directory
+imshow(mat2gray(jnd));
+```
+
+The MATLAB ports do not depend on the Python or C++ ports — each is independently runnable.
 
 ### C++
 
+C++ ports ship as zipped sources inside each method directory (e.g. `Chou and Li/C++/cpp_source.zip`). Unpack the archive and build with CMake:
+
 ```bash
-cd cpp
+cd "Chou and Li/C++"
+unzip cpp_source.zip -d build_src
+cd build_src
 cmake -S . -B build && cmake --build build -j
-./build/openjnd --method zhang --input ../test_data/actor.png --output zhang_actor.png
+./build/openjnd_chou test_data/lena.png
 ```
 
-Each language's directory contains its own `README.md` with build prerequisites, parameter documentation, and minimal worked examples.
+Refer to the README inside each unpacked C++ source tree for the exact target name and CLI flags.
 
 ---
 
@@ -392,7 +421,7 @@ Suggested additions especially welcome:
 - 360-degree, light-field, or stereoscopic JND
 - Faster GPU-resident reimplementations of the transform-domain methods
 
-For non-trivial contributions please open an Issue first so we can align on the interface and integration.
+For non-trivial contributions please open an Issue first so we can align on the interface and integration. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow.
 
 ---
 
@@ -400,7 +429,6 @@ For non-trivial contributions please open an Issue first so we can align on the 
 
 - **Continually broaden the catalogue** with learning-based JND models (deep predictors, perceptual GAN-style approaches) as the field produces them
 - Subjective validation harness (PSPNR; noise injection at the JND boundary; controlled user study scripts)
-- Reproducible Docker image pinning MATLAB Runtime + Python + GCC versions
 - Colour JND extensions (CIELAB, opponent-channel masking)
 - Bridge to deep-learning IQA codebases (LPIPS, DISTS, PieAPP) for JND-weighted variants
 - Mirrored Chinese-language documentation
@@ -417,7 +445,7 @@ Visually equivalent, not bit-identical. Floating-point ordering, BLAS/DCT backen
 Because perceptual codecs and watermarking systems in active production still rely on foundational pixel-domain estimators for their simplicity, low latency, and codec-locality. JND is a domain where the newest model is rarely the right answer by default — different applications call for different generations of the lineage.
 
 **Which language should I start with?**
-For reproducing the numbers in the original papers, MATLAB. For integration into modern pipelines, Python. C++ only when latency is the binding constraint; verify it actually wins your case using `benchmarks/runtime.py`.
+For reproducing the numbers in the original papers, MATLAB. For integration into modern pipelines and for fully open-source dependencies, Python. C++ only when latency is the binding constraint.
 
 **Why grayscale only?**
 The classic JND literature is luminance-channel-first; sticking to grayscale keeps the comparison clean. Colour-aware extensions are on the [roadmap](#roadmap).
@@ -426,7 +454,7 @@ The classic JND literature is luminance-channel-first; sticking to grayscale kee
 PSPNR (introduced by Chou & Li) counts only distortion above the per-pixel JND threshold. Two images can have identical PSNR yet very different PSPNR if one hides its distortion in regions of high JND budget.
 
 **Is MATLAB required?**
-No. Every method also has a Python implementation; most also have a C++ one.
+No. Every method except the MATLAB-only Wu (free energy) also has a Python implementation that runs on the open-source SciPy / NumPy / OpenCV stack.
 
 **Can I cite OpenJND independently of any specific method?**
 Yes — see [Citation](#citation). Please *also* cite the original paper for each method you use.
@@ -452,14 +480,13 @@ When you use a specific method, please also cite the corresponding original pape
 
 ## Community
 
-OpenJND is released under the **MIT License** and hosted on [GitHub](https://github.com/Terriao/OpenJND), with a synchronised mirror on the [OpenI](https://openi.pcl.ac.cn/OpenDatasets/OpenJND?lang=en-US) platform maintained by Peng Cheng Laboratory. Since its first public release, the project has accumulated a steady following of stars, forks, and external contributors, and the maintainers continue to merge community-submitted improvements on a rolling basis.
+OpenJND is released under the **MIT License** and hosted on [GitHub](https://github.com/Terriao/OpenJND), with a synchronised mirror on the [OpenI](https://openi.pcl.ac.cn/OpenDatasets/OpenJND?lang=en-US) platform maintained by Peng Cheng Laboratory.
 
 The repository follows standard open-source engineering practice:
 
-- **Testing.** Each language port carries its own test suite — unit tests on the masking primitives (luminance adaptation, DCT subbands, PCA components) and integration tests that re-derive every JND map shown in this README. The full suite runs on every push via GitHub Actions.
-- **Documentation.** Beyond this README, each method subdirectory contains a language-specific README, parameter notes, and a runnable minimal example. A long-form documentation site with a tutorial gallery is on the [roadmap](#roadmap).
-- **Continuous integration.** Two branches are kept live: `main` for tagged stable releases and `dev` for ongoing work. Both are built and tested independently so that downstream users can pin to whichever guarantees they need.
-- **Contributor onboarding.** The repository ships a `CONTRIBUTING.md`, issue templates (bug report, feature request, new-method proposal), and a pull-request template that prompts for the unified interface, a runnable example, and at least one unit test.
+- **Contributor onboarding.** The repository ships a [CONTRIBUTING.md](CONTRIBUTING.md), structured issue templates (bug report, feature request, new-method proposal), and a pull-request template that prompts for the unified interface, validation against the original paper, and accompanying documentation.
+- **Open governance of the catalogue.** New methods are proposed via the *"Propose a new JND method"* issue template and discussed in the open before any code is merged.
+- **Documentation by method.** Beyond this top-level README, each method directory carries its own README explaining the implementation, parameters, and a worked example.
 
 Contributions are welcomed on any of the items listed in the [Roadmap](#roadmap), and especially on porting methods to the language slots currently marked `—` in the [Method index](#method-index).
 
