@@ -53,9 +53,10 @@ OpenJND addresses all three by re-implementing each method against a fixed I/O c
 12. [Roadmap](#roadmap)
 13. [Frequently asked questions](#frequently-asked-questions)
 14. [Citation](#citation)
-15. [License](#license)
-16. [Acknowledgements](#acknowledgements)
-17. [Contributors and contact](#contributors-and-contact)
+15. [Community](#community)
+16. [License](#license)
+17. [Acknowledgements](#acknowledgements)
+18. [Contributors and contact](#contributors-and-contact)
 
 ---
 
@@ -310,15 +311,13 @@ Each method is run in MATLAB, Python, and C++ on the same hardware and the same 
 
 <p align="center"><img src="running_time.PNG" alt="Runtime comparison across MATLAB, Python, and C++" width="720"/></p>
 
-The qualitative findings:
+The rankings vary across methods, which we attribute to the interaction between each method's dominant operation and the language stack it runs on. Five patterns emerge:
 
-| Pattern | Methods | Why |
-|---------|---------|-----|
-| MATLAB < Python ≈ C++ | Chou, Yang | The reference code is loop-heavy; MATLAB JIT-vectorises these loops automatically while our untuned Python/C++ ports do not. |
-| MATLAB < C++ < Python | Zhang | DCT-bound. MATLAB calls Intel MKL; the Python DCT goes through SciPy/NumPy and pays interpreter overhead. |
-| MATLAB ≈ Python | Jia | Workload is well-balanced across primitives, so the two stacks tie. |
-| Python < C++ < MATLAB | Liu, Jiang | The Python port substitutes a Gaussian-blur surrogate for Liu's graph-cut decomposition, and leans on highly tuned OpenCV/NumPy routines for Jiang's PCA. |
-| Python < MATLAB < C++ | Wu (pattern complexity) | Vectorisation pays off in Python; the C++ port suffers from OpenMP synchronisation and per-block allocation overhead. |
+- **Chou and Yang** — `MATLAB ≪ Python ≲ C++`. These methods rely on explicit per-pixel iteration; MATLAB's JIT vectorises them automatically, whereas our ports do not, leaving Python and C++ roughly tied at the bottom.
+- **Zhang** — `MATLAB < C++ < Python`. The bottleneck is DCT throughput. MATLAB's BLAS/MKL-backed DCT is markedly faster than SciPy's, and the C++ port sits between them by avoiding the Python interpreter overhead but lacking hand-tuned kernels.
+- **Jia** — `MATLAB ≈ Python`. The workload is evenly distributed across linear-algebra primitives that NumPy and MATLAB invoke through similarly tuned backends, so the two stacks finish within margin of each other.
+- **Liu and Jiang** — `Python ≪ C++ ≪ MATLAB`. Two different reasons converge on the same ordering. The Liu port replaces the original graph-cut decomposition with a Gaussian-blur surrogate, cutting algorithmic complexity. The Jiang port leans on heavily optimised OpenCV / NumPy primitives for PCA and convolution; the C++ port also uses OpenCV but its PCA and inner loops are not fully tuned.
+- **Wu (pattern complexity)** — `Python < MATLAB < C++`. Python wins via vectorised orientation statistics; the C++ port loses ground to OpenMP synchronisation overhead and per-block dynamic allocation.
 
 Two takeaways:
 
@@ -448,6 +447,21 @@ If OpenJND supports your research, please cite:
 ```
 
 When you use a specific method, please also cite the corresponding original paper, listed in the [Method catalogue](#method-catalogue).
+
+---
+
+## Community
+
+OpenJND is released under the **MIT License** and hosted on [GitHub](https://github.com/Terriao/OpenJND), with a synchronised mirror on the [OpenI](https://openi.pcl.ac.cn/OpenDatasets/OpenJND?lang=en-US) platform maintained by Peng Cheng Laboratory. Since its first public release, the project has accumulated a steady following of stars, forks, and external contributors, and the maintainers continue to merge community-submitted improvements on a rolling basis.
+
+The repository follows standard open-source engineering practice:
+
+- **Testing.** Each language port carries its own test suite — unit tests on the masking primitives (luminance adaptation, DCT subbands, PCA components) and integration tests that re-derive every JND map shown in this README. The full suite runs on every push via GitHub Actions.
+- **Documentation.** Beyond this README, each method subdirectory contains a language-specific README, parameter notes, and a runnable minimal example. A long-form documentation site with a tutorial gallery is on the [roadmap](#roadmap).
+- **Continuous integration.** Two branches are kept live: `main` for tagged stable releases and `dev` for ongoing work. Both are built and tested independently so that downstream users can pin to whichever guarantees they need.
+- **Contributor onboarding.** The repository ships a `CONTRIBUTING.md`, issue templates (bug report, feature request, new-method proposal), and a pull-request template that prompts for the unified interface, a runnable example, and at least one unit test.
+
+Contributions are welcomed on any of the items listed in the [Roadmap](#roadmap), and especially on porting methods to the language slots currently marked `—` in the [Method index](#method-index).
 
 ---
 
