@@ -1,0 +1,66 @@
+name: Propose a new JND method
+description: Suggest a JND model to add to the catalogue.
+title: "[New method] "
+labels: ["new-method"]
+body:
+  - type: input
+    id: paper
+    attributes:
+      label: Reference paper (title)
+    validations:
+      required: true
+
+  - type: input
+    id: authors
+    attributes:
+      label: Authors
+    validations:
+      required: true
+
+  - type: input
+    id: venue
+    attributes:
+      label: Venue and year
+      description: e.g. IEEE TIP 2024
+
+  - type: input
+    id: doi
+    attributes:
+      label: DOI or paper URL
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Why should OpenJND include this method?
+      description: One paragraph on what it brings that the existing eight do not.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: lineage
+    attributes:
+      label: Closest existing lineage
+      options:
+        - Foundational
+        - Temporal extension
+        - Subband refinement
+        - DCT formulation
+        - Decomposition era
+        - Cognitive-inspired
+        - Pattern-aware
+        - Top-down learning
+        - A new lineage (please justify in description)
+
+  - type: input
+    id: reference_code
+    attributes:
+      label: Original authors' reference code (if public)
+      description: URL to GitHub or project page.
+
+  - type: checkboxes
+    id: willing
+    attributes:
+      label: Implementation intent
+      options:
+        - label: I'd be willing to port this method myself.
+        - label: I'm requesting that someone else port it.
