@@ -439,12 +439,11 @@ Yes — see [Citation](#citation). Please *also* cite the original paper for eac
 If OpenJND supports your research, please cite:
 
 ```bibtex
-@inproceedings{gao2026openjnd,
-  title     = {OpenJND: A Comprehensive Open Source Library for Just Noticeable Difference},
-  author    = {Gao, Wenxu and Peng, Changhao and Su, Jingxuan and Gao, Wei},
-  booktitle = {Proceedings of the 34th ACM International Conference on Multimedia},
-  year      = {2026},
-  note      = {Under review}
+@misc{openjnd2026,
+  title  = {OpenJND: A Comprehensive Open Source Library for Just Noticeable Difference},
+  author = {Gao, Wenxu and Peng, Changhao and Su, Jingxuan and Gao, Wei},
+  year   = {2026},
+  howpublished = {\url{https://github.com/Terriao/OpenJND}}
 }
 ```
 
