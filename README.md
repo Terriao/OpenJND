@@ -111,14 +111,14 @@ The lineage is **converging, not branching**: later models do not invalidate ear
 
 | # | Method | Lineage | Domain | Distinguishing idea | MATLAB | Python | C++ |
 |---|--------|---------|--------|---------------------|:------:|:------:|:---:|
-| 5.1 | [Chou & Li](#51-chou--li) | Foundational | Pixel | Luminance adaptation + texture masking; introduces PSPNR | ● | ◐ | ◐ |
-| 5.2 | [Yang et al.](#52-yang-et-al) | Temporal extension | Pixel | NAMM with temporal masking, multi-component | ● | ◐ | ◐ |
-| 5.3 | [Zhang et al.](#53-zhang-et-al) | Subband refinement | Transform | Refined luminance curve + block-classified CM | ● | ◐ | ◐ |
-| 5.4 | [Jia et al.](#54-jia-et-al) | DCT formulation | Transform (DCT) | Spatio-temporal CSF with eye-movement compensation | ◐ | ◐ | — |
-| 5.5 | [Liu et al.](#55-liu-et-al) | Decomposition era | Pixel | TV decomposition separating edge and texture masking | ● | ◐ | ◐ |
-| 5.6 | [Wu et al. (free energy)](#56-wu-et-al-free-energy) | Cognitive-inspired | Pixel | AR prediction splits ordered vs. disordered regions | ● | — | — |
-| 5.7 | [Wu et al. (pattern complexity)](#57-wu-et-al-pattern-complexity) | Pattern-aware | Pixel | Orientation diversity as masking strength | ● | ◐ | ◐ |
-| 5.8 | [Jiang et al.](#58-jiang-et-al) | Top-down learning | Transform (KLT) | Data-driven CPL prediction | ● | ◐ | ◐ |
+| 5.1 | [Chou & Li](#51-chou--li) · [📂](Chou%20and%20Li) | Foundational | Pixel | Luminance adaptation + texture masking; introduces PSPNR | ● | ◐ | ◐ |
+| 5.2 | [Yang et al.](#52-yang-et-al) · [📂](Yang%20et%20al) | Temporal extension · NAMM | Pixel · YCbCr | NAMM combiner with edge/non-edge weighting and temporal pathway | ● | ◐ | ◐ |
+| 5.3 | [Zhang et al.](#53-zhang-et-al) · [📂](Zhang%20et%20al) | Subband refinement | Transform | Refined luminance curve + block-classified CM | ● | ◐ | ◐ |
+| 5.4 | [Jia et al.](#54-jia-et-al) · [📂](Jia%20et%20al) | DCT formulation | Transform (DCT) | Spatio-temporal CSF with eye-movement compensation | ◐ | ◐ | — |
+| 5.5 | [Liu et al.](#55-liu-et-al) · [📂](Liu%20et%20al) | Decomposition era | Pixel | TV decomposition separating edge and texture masking | ● | ◐ | ◐ |
+| 5.6 | [Wu et al. (free energy)](#56-wu-et-al-free-energy) · [📂](Wu%20et%20al%20%28TMM%29) | Cognitive-inspired | Pixel | AR prediction splits ordered vs. disordered regions | ● | — | — |
+| 5.7 | [Wu et al. (pattern complexity)](#57-wu-et-al-pattern-complexity) · [📂](Wu%20et%20al%20%28TIP%29) | Pattern-aware | Pixel | Orientation diversity as masking strength | ● | ◐ | ◐ |
+| 5.8 | [Jiang et al.](#58-jiang-et-al) · [📂](Jiang%20et%20al) | Top-down learning | Transform (KLT) | Data-driven CPL prediction | ● | ◐ | ◐ |
 
 Legend — ● upstream open-source reference; ◐ this repository's ported implementation; — not yet implemented.
 
@@ -147,6 +147,7 @@ For each method we give the context that motivated it, the modelling step that d
 ### 5.1 Chou & Li
 
 > **Foundational pixel-domain model** · luminance adaptation + texture masking
+> 🔗 Subproject: <https://github.com/Terriao/OpenJND/tree/main/Chou%20and%20Li>
 
 The cornerstone pixel-domain JND model around which the rest of the catalogue is organised. It estimates a per-pixel visibility budget from two HVS factors — how bright the background is (luminance adaptation), and how busy the local neighbourhood is (texture masking) — and uses the maximum of the two as the local JND threshold. The companion paper also introduces **PSPNR**, a fidelity metric that ignores distortion components falling below the threshold.
 
@@ -163,11 +164,12 @@ Behaviour of the resulting map: large budgets on dark and on busy regions; relat
 
 ### 5.2 Yang et al.
 
-> **Temporal extension of the foundational model** · nonlinear additive masking · video-aware
+> **Nonlinear additive masking (NAMM)** · YCbCr full-colour · video-aware
+> 🔗 Subproject: <https://github.com/Terriao/OpenJND/tree/main/Yang%20et%20al>
 
-Recasts the foundational max-rule as a **nonlinear additive masking model (NAMM)** that combines luminance, texture, and a new **temporal masking** term across colour components. The additive-but-nonlinear combination avoids the double-counting that pure summation causes, while the temporal term lets the model travel from still images to video. The authors plug it into a video codec to demonstrate gains in motion estimation and residual filtering.
+Replaces the foundational max-rule with a **nonlinear additive masking model (NAMM)**: `JND = LA + TM − C_lt · min(LA, TM)`. `C_lt` recovers the Chou–Li max-rule at `C_lt = 1` and pure addition at `C_lt = 0`; the paper sets it per channel (`C_lt_Y = 0.30`, `C_lt_Cb = 0.25`, `C_lt_Cr = 0.20`), reflecting that the Y luminance and Y texture branches share more information than the chroma branches do. Two further refinements lift the model from grayscale-still-image to colour-video: an **edge-adaptive weight map** (Canny on Y followed by a 7×7 Gaussian, σ = 0.8) suppresses the masking budget along visible edges, and a **temporal-masking** factor `f(ild)` scales the spatial JND by a bowl-shaped function of the inter-frame luminance difference.
 
-Behaviour: smoother handling of edges than the max-rule, and the only model in the catalogue with a native temporal pathway.
+Behaviour: smoother handling of edges than the foundational max-rule; recovers chroma-channel JND budget (≈2 dB additional perceptually-lossless PSNR redundancy in the paper's tests); the only model in the catalogue with both native colour and a native temporal pathway.
 
 ```bibtex
 @article{yang2005just,
@@ -181,6 +183,7 @@ Behaviour: smoother handling of edges than the max-rule, and the only model in t
 ### 5.3 Zhang et al.
 
 > **Subband refinement** · refined luminance · block-classified contrast masking
+> 🔗 Subproject: <https://github.com/Terriao/OpenJND/tree/main/Zhang%20et%20al>
 
 Addresses two long-standing weaknesses of subband JND modelling: an inaccurate luminance-adaptation curve at very dark and very bright extremes, and an over-aggressive contrast-masking gain in edge blocks. A new luminance-adaptation formula and an explicit **block classification** step (edge / texture / smooth) scale the masking gain differently per category. The resulting JND profile is markedly more conservative near edges, eliminating a class of visible artefacts that earlier subband coders produced.
 
@@ -198,6 +201,7 @@ Behaviour: the JND map carries the imprint of the block grid by construction; su
 ### 5.4 Jia et al.
 
 > **DCT-domain formulation** · spatio-temporal CSF · eye-movement-aware
+> 🔗 Subproject: <https://github.com/Terriao/OpenJND/tree/main/Jia%20et%20al>
 
 The first model in the catalogue designed natively in the DCT domain that the codecs themselves use. Combines **spatial and temporal contrast sensitivity functions** with corrections for the smooth-pursuit eye movements a viewer makes when tracking moving content. The output is a per-coefficient threshold map applicable to both still frames and frame pairs with motion.
 
@@ -215,6 +219,7 @@ Behaviour: when applied to a frame pair with translation, the JND map cleanly re
 ### 5.5 Liu et al.
 
 > **Decomposition era** · TV-based edge/texture separation
+> 🔗 Subproject: <https://github.com/Terriao/OpenJND/tree/main/Liu%20et%20al>
 
 Earlier contrast-masking estimators tend to lump strong gradients into a single "high-frequency" bucket, so textured regions are routinely *misclassified as edges* and assigned an artificially low budget. Liu et al. propose a clean fix: split the image into a **structural component** (used for edge masking) and a **textural component** (used for texture masking) via **total-variation decomposition**, then estimate the two masking terms from the two components independently.
 
@@ -232,8 +237,9 @@ Behaviour: textures recover their rightful, generous JND budget; edges remain pr
 ### 5.6 Wu et al. (free energy)
 
 > **Cognitive-inspired** · free-energy principle · ordered vs. disordered split
+> 🔗 Subproject: <https://github.com/Terriao/OpenJND/tree/main/Wu%20et%20al%20%28TMM%29>
 
-A conceptually distinct entry in the catalogue. Drawing on the free-energy framework from theoretical neuroscience, the HVS is modelled as attempting to *predict* the orderly content of an image; whatever cannot be predicted is **disordered** content that the eye tolerates much more freely. An **autoregressive predictor** fits the image, the residual is treated as disorder, and JND is computed separately for ordered and disordered components.
+A conceptually distinct entry in the catalogue. Drawing on the free-energy framework from theoretical neuroscience, the HVS is modelled as attempting to *predict* the orderly content of an image; whatever cannot be predicted is **disordered** content that the eye tolerates much more freely. An **autoregressive predictor** over an 11×11 neighbourhood fits the image, the residual is treated as disorder, and JND is computed separately for ordered and disordered components, then combined via NAMM.
 
 Behaviour: substantially elevated JND in disordered regions (foliage, fabric, noise), while ordered regions stay conservative. Currently MATLAB-only in this repository (see directory `Wu et al (TMM)`).
 
@@ -249,8 +255,9 @@ Behaviour: substantially elevated JND in disordered regions (foliage, fabric, no
 ### 5.7 Wu et al. (pattern complexity)
 
 > **Pattern-aware** · orientation diversity
+> 🔗 Subproject: <https://github.com/Terriao/OpenJND/tree/main/Wu%20et%20al%20%28TIP%29>
 
-Contrast alone is a poor predictor of masking strength: two regions with identical contrast can mask very different amounts of distortion depending on whether their local patterns are *regular* (e.g. a brick wall) or *irregular* (e.g. crumpled fabric). **Pattern complexity** is quantified here as the diversity of local orientations and combined with luminance contrast in a new spatial-masking estimator. Code lives in `Wu et al (TIP)`.
+Contrast alone is a poor predictor of masking strength: two regions with identical contrast can mask very different amounts of distortion depending on whether their local patterns are *regular* (e.g. a brick wall) or *irregular* (e.g. crumpled fabric). **Pattern complexity** is quantified here as the *number of distinct local orientation bins* (L₀ norm of an orientation histogram, with bin width 12°) and combined with luminance contrast in a new spatial-masking estimator. Code lives in `Wu et al (TIP)`.
 
 Behaviour: irregular-pattern regions receive a higher JND budget than regular-pattern regions of the same contrast. A natural successor to texture-masking models for high-resolution natural imagery.
 
@@ -266,6 +273,7 @@ Behaviour: irregular-pattern regions receive a higher JND budget than regular-pa
 ### 5.8 Jiang et al.
 
 > **Top-down learning** · data-driven CPL prediction · KLT-domain
+> 🔗 Subproject: <https://github.com/Terriao/OpenJND/tree/main/Jiang%20et%20al>
 
 The catalogue's only *top-down* model. Instead of summing low-level masking factors, the model asks the more direct question: *at what point does distortion start to be noticed?* Subjective experiments on 500 natural images locate this **critical perceptually-lossless (CPL)** point for each image; the cumulative normalised KLT-coefficient energy at the CPL is well approximated by a Weibull distribution. For a new image, the model predicts its CPL counterpart and reports the difference map as JND.
 
@@ -339,6 +347,7 @@ A rough decision tree for downstream users:
 | Video coding with motion compensation | Yang or Jia |
 | Watermarking with imperceptibility constraint | Wu (free energy) or Wu (pattern complexity) |
 | IQA / perceptual quality metric design | Jiang (top-down) for alignment with subjective tests |
+| Colour-aware applications | Yang (the only catalogue entry with native YCbCr) |
 | Teaching / first reproducible baseline | Chou (the most thoroughly documented foundational model) |
 
 When in doubt, run the methods you are considering on a few of your own images and inspect the maps. Visual inspection at this stage saves a lot of downstream confusion.
@@ -417,7 +426,7 @@ The fastest path to a new method is the unified interface: implement a single fu
 Suggested additions especially welcome:
 
 - Learning-based JND models (deep-network predictors, perceptual GAN-style approaches)
-- Colour-aware JND (the current catalogue is grayscale-first)
+- Colour-aware JND (the current catalogue is grayscale-first, with Yang et al. as the only YCbCr entry)
 - 360-degree, light-field, or stereoscopic JND
 - Faster GPU-resident reimplementations of the transform-domain methods
 
@@ -429,7 +438,7 @@ For non-trivial contributions please open an Issue first so we can align on the 
 
 - **Continually broaden the catalogue** with learning-based JND models (deep predictors, perceptual GAN-style approaches) as the field produces them
 - Subjective validation harness (PSPNR; noise injection at the JND boundary; controlled user study scripts)
-- Colour JND extensions (CIELAB, opponent-channel masking)
+- Colour JND extensions (CIELAB, opponent-channel masking) beyond the YCbCr branch in Yang et al.
 - Bridge to deep-learning IQA codebases (LPIPS, DISTS, PieAPP) for JND-weighted variants
 - Mirrored Chinese-language documentation
 - Tutorial notebooks walking through each method step by step
@@ -448,7 +457,7 @@ Because perceptual codecs and watermarking systems in active production still re
 For reproducing the numbers in the original papers, MATLAB. For integration into modern pipelines and for fully open-source dependencies, Python. C++ only when latency is the binding constraint.
 
 **Why grayscale only?**
-The classic JND literature is luminance-channel-first; sticking to grayscale keeps the comparison clean. Colour-aware extensions are on the [roadmap](#roadmap).
+The classic JND literature is luminance-channel-first; sticking to grayscale keeps the comparison clean. Yang et al. is the catalogue's exception with a native YCbCr formulation; further colour-aware extensions are on the [roadmap](#roadmap).
 
 **What is PSPNR and why is it not just PSNR?**
 PSPNR (introduced by Chou & Li) counts only distortion above the per-pixel JND threshold. Two images can have identical PSNR yet very different PSPNR if one hides its distortion in regions of high JND budget.
