@@ -10,44 +10,43 @@ This directory contains the OpenJND implementation of the foundational pixel-dom
 
 Chou & Li estimate a per-pixel visibility threshold from two HVS factors:
 
-1. **Background luminance adaptation `f₂`.** The HVS is more tolerant to distortion in very dark and very bright regions and most sensitive around mid-grey (≈127). The luminance term is modelled as a piecewise function — a square-root rise in dark regions and a linear ramp in bright regions:
+1. **Background luminance adaptation `JNDl`.** The HVS is more tolerant to distortion in very dark and very bright regions and most sensitive around mid-grey (≈127). The luminance term is modelled as a piecewise function — a square-root rise in dark regions and a linear ramp in bright regions:
 
 ```
-   f₂(bg) = { T₀ · (1 − √(bg/127)) + 3      if bg ≤ 127
-            { γ · (bg − 127) + 3              if bg > 127
+   JNDl(x,y) = { T₀ · (1 − √(bg/127)) + 3      if bg ≤ 127
+               { γ · (bg − 127) + 3              if bg > 127
 ```
 
-   with `T₀ = 17` and `γ = 3/128` at a viewing distance of approximately six times the image height.
+   with `T₀ = 17` and `γ = 3/128`, where `bg(x,y)` is the local mean luminance computed with the 5×5 weighted lowpass operator from the original paper (centre pixel excluded; weights summing to 32).
 
-2. **Texture / spatial masking `f₁`.** The maximum weighted average of luminance changes `mg(x,y)` over a 5×5 neighbourhood is computed in four directions using gradient operators G₁–G₄. The masking term scales linearly with `mg` through luminance-dependent slope `α` and intercept `β`:
-
-```
-   f₁(bg, mg) = mg · α(bg) + β(bg)
-   α(bg) = bg · 0.0001 + 0.115
-   β(bg) = λ − bg · 0.01,    λ = 0.5
-```
-
-The two factors are combined with a **max-rule** — the JND at each pixel is the larger of the two predictions:
+2. **Texture / spatial masking `JNDt`.** The maximum weighted gradient `Gm(x,y)` over a 5×5 neighbourhood is computed in four directions using the operators `G1, G2, G3, G4` from the paper (normalised by 16). The masking term scales linearly with `Gm` through luminance-dependent slope `α` and intercept `β`:
 
 ```
-JND_fb(x,y) = max{ f₁(bg, mg),  f₂(bg) }
+   JNDt(x,y) = Gm(x,y) · α(bg)  +  β(bg)
+   α(bg) = 0.0001 · bg + 0.115
+   β(bg) = λ − 0.01 · bg,    λ = 0.5
 ```
 
-The companion paper also introduces **PSPNR** (Peak Signal-to-Perceptible-Noise Ratio), a fidelity metric that counts only the distortion above the JND threshold. An MND profile of "distortion index" `d ∈ [1, 4]` is obtained by `MND_d = JND_fb · d`, useful for graceful quality degradation at tight bit-rate budgets.
+The two terms are combined into the final pixel-wise JND as
+
+```
+JND(x,y) = JNDl(x,y) + JNDt(x,y) − C_TG · min{ JNDl(x,y), JNDt(x,y) },    C_TG = 0.3
+```
+
+The companion paper also introduces **PSPNR** (Peak Signal-to-Perceptible-Noise Ratio), a fidelity metric that counts only the distortion above the JND threshold.
 
 ## Behaviour of the JND map
 
 - Large budgets on dark and on busy regions.
-- Relatively conservative near isolated edges, where the max-rule tends to over-allocate.
+- Relatively conservative near isolated edges.
 - The estimator is image-plane and grayscale by construction — it serves as the spatial baseline reused by Yang et al., Wu et al., and Liu et al.
 
 ## Directory layout
 
 ```
 Chou and Li/
-├── MATLAB/          # reference implementation
-├── Python/          # ported implementation
-├── C++/             # ported implementation (zip)
+├── MATLAB/          # reference implementation (main.m)
+├── Python/          # ported implementation (main.py)
 └── paper.pdf        # original paper
 ```
 
@@ -55,9 +54,11 @@ Chou and Li/
 
 ```
 INPUT  : grayscale image       (uint8 / float, H × W)
-         optional config struct (T0, gamma, lambda, viewing_distance)
+         mode flag             ('Chou' or 'Yang')
 OUTPUT : JND map of the same H × W shape (float)
 ```
+
+The `'Chou'` mode reproduces the configuration described above. The `'Yang'` mode swaps the texture-masking term for a Canny-based edge-protect variant that is reused by `Yang et al/`; pass `'Chou'` to stay within the scope of the foundational model.
 
 ## Minimal usage example
 
@@ -65,32 +66,33 @@ OUTPUT : JND map of the same H × W shape (float)
 ```matlab
 addpath('MATLAB');
 img = imread('../test_data/lena.png');
-jnd = chou_li_jnd(img);
+jnd = JND_pixel(img, 'Chou');
 imshow(mat2gray(jnd));
 ```
 
 **Python**
 ```bash
 cd Python
-python main.py        # default input: ../test_data/lena.png
+pip install numpy scipy opencv-python matplotlib
+python main.py
 ```
 
-**C++**
-```bash
-cd C++
-unzip cpp_source.zip -d build_src
-cd build_src && cmake -S . -B build && cmake --build build -j
-./build/chou_li ../test_data/lena.png
+Programmatic call:
+```python
+from main import jnd_pixel
+import cv2
+img = cv2.imread('../test_data/lena.png', cv2.IMREAD_GRAYSCALE)
+jnd = jnd_pixel(img, 'Chou')
 ```
 
 ## Default parameters
 
 | Parameter | Default | Meaning |
 |-----------|---------|---------|
-| `T₀` | 17 | Base threshold at zero background luminance (`f₂` at bg = 0) |
-| `γ` | 3/128 | Slope of the bright branch of `f₂` |
-| `λ` | 0.5 | Sets the average amplitude of `β(bg)` in `f₁` |
-| `viewing_distance` | 6 × image height | Distance assumed when fitting `T₀, γ, λ` |
+| `T₀` | 17 | Base threshold at zero background luminance (`JNDl` at bg = 0) |
+| `γ` | 3/128 | Slope of the bright branch of `JNDl` |
+| `λ` | 0.5 | Constant term of `β(bg)` in `JNDt` |
+| `C_TG` | 0.3 | Combiner factor when merging `JNDl` and `JNDt` |
 
 All defaults reproduce the numbers reported in the original publication.
 
