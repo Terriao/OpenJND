@@ -1,0 +1,72 @@
+name: Bug report
+description: Report a numerical mismatch, crash, or regression in OpenJND.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report. Please fill in as many fields as possible.
+
+  - type: dropdown
+    id: method
+    attributes:
+      label: Method
+      description: Which JND method is affected?
+      options:
+        - Chou & Li
+        - Yang et al.
+        - Zhang et al.
+        - Jia et al.
+        - Liu et al.
+        - Wu et al. (free energy / TMM 2013)
+        - Wu et al. (pattern complexity / TIP 2017)
+        - Jiang et al.
+        - Multiple / unclear
+    validations:
+      required: true
+
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language port
+      options:
+        - MATLAB
+        - Python
+        - C++
+        - Multiple
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: What did you expect to happen, and what actually happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: Input image dimensions, parameters, exact command or function call.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: |
+        - OS:
+        - Python / MATLAB / compiler version:
+        - OpenCV, NumPy, SciPy versions (if Python):
+      render: markdown
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context
+      description: Screenshots, logs, or anything else.
