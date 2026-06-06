@@ -8,24 +8,38 @@ This directory contains the OpenJND implementation of the foundational pixel-dom
 
 ## What the model does
 
-Chou & Li estimate a per-pixel visibility threshold from two Human Visual System (HVS) factors:
+Chou & Li estimate a per-pixel visibility threshold from two HVS factors:
 
-1. **Background luminance adaptation.** The HVS is more tolerant to distortion in very dark and very bright regions and most sensitive around mid-grey (≈127). The luminance term is modelled as a piecewise function — a square-root rise in dark regions and a linear ramp in bright regions, both anchored at a base threshold T₀ = 17 with a viewing distance of approximately six times the image height.
-2. **Texture masking.** The maximum weighted average of luminance changes over a 5×5 neighbourhood is computed in four directions using gradient operators G₁–G₄. The resulting `mg(x,y)` modulates the visibility threshold linearly, with slope and intercept that depend on the local background luminance.
-
-The two factors are combined with a **max-rule** — the JND threshold at each pixel is the larger of the two predictions:
+1. **Background luminance adaptation `f₂`.** The HVS is more tolerant to distortion in very dark and very bright regions and most sensitive around mid-grey (≈127). The luminance term is modelled as a piecewise function — a square-root rise in dark regions and a linear ramp in bright regions:
 
 ```
-JND_fb(x,y) = max{ f₁(bg, mg), f₂(bg) }
+   f₂(bg) = { T₀ · (1 − √(bg/127)) + 3      if bg ≤ 127
+            { γ · (bg − 127) + 3              if bg > 127
 ```
 
-The companion paper also introduces **PSPNR** (Peak Signal-to-Perceptible-Noise Ratio), a fidelity metric that counts only the distortion above the JND threshold.
+   with `T₀ = 17` and `γ = 3/128` at a viewing distance of approximately six times the image height.
+
+2. **Texture / spatial masking `f₁`.** The maximum weighted average of luminance changes `mg(x,y)` over a 5×5 neighbourhood is computed in four directions using gradient operators G₁–G₄. The masking term scales linearly with `mg` through luminance-dependent slope `α` and intercept `β`:
+
+```
+   f₁(bg, mg) = mg · α(bg) + β(bg)
+   α(bg) = bg · 0.0001 + 0.115
+   β(bg) = λ − bg · 0.01,    λ = 0.5
+```
+
+The two factors are combined with a **max-rule** — the JND at each pixel is the larger of the two predictions:
+
+```
+JND_fb(x,y) = max{ f₁(bg, mg),  f₂(bg) }
+```
+
+The companion paper also introduces **PSPNR** (Peak Signal-to-Perceptible-Noise Ratio), a fidelity metric that counts only the distortion above the JND threshold. An MND profile of "distortion index" `d ∈ [1, 4]` is obtained by `MND_d = JND_fb · d`, useful for graceful quality degradation at tight bit-rate budgets.
 
 ## Behaviour of the JND map
 
 - Large budgets on dark and on busy regions.
 - Relatively conservative near isolated edges, where the max-rule tends to over-allocate.
-- An MND profile of arbitrary "distortion index" `d ∈ [1, 4]` can be obtained by multiplying every JND value by `d`, useful for graceful quality degradation at tight bit-rate budgets.
+- The estimator is image-plane and grayscale by construction — it serves as the spatial baseline reused by Yang et al., Wu et al., and Liu et al.
 
 ## Directory layout
 
@@ -73,10 +87,10 @@ cd build_src && cmake -S . -B build && cmake --build build -j
 
 | Parameter | Default | Meaning |
 |-----------|---------|---------|
-| `T0` | 17 | Base threshold at zero background luminance |
-| `gamma` | 3/128 | Slope of the luminance term for bright regions |
-| `lambda` | 0.5 | Average amplitude factor for the texture term |
-| `viewing_distance` | 6 × image height | Distance assumed when computing thresholds |
+| `T₀` | 17 | Base threshold at zero background luminance (`f₂` at bg = 0) |
+| `γ` | 3/128 | Slope of the bright branch of `f₂` |
+| `λ` | 0.5 | Sets the average amplitude of `β(bg)` in `f₁` |
+| `viewing_distance` | 6 × image height | Distance assumed when fitting `T₀, γ, λ` |
 
 All defaults reproduce the numbers reported in the original publication.
 
