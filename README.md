@@ -112,11 +112,11 @@ The lineage is **converging, not branching**: later models do not invalidate ear
 | # | Method | Lineage | Domain | Distinguishing idea | MATLAB | Python | C++ |
 |---|--------|---------|--------|---------------------|:------:|:------:|:---:|
 | 5.1 | [Chou & Li](#51-chou--li) · [📂](Chou%20and%20Li) | Foundational | Pixel | Luminance adaptation + texture masking; introduces PSPNR | ● | ◐ | ◐ |
-| 5.2 | [Yang et al.](#52-yang-et-al) · [📂](Yang%20et%20al) | Temporal extension · NAMM | Pixel · YCbCr | NAMM combiner with edge/non-edge weighting and temporal pathway | ● | ◐ | ◐ |
+| 5.2 | [Yang et al.](#52-yang-et-al) · [📂](Yang%20et%20al) | Temporal extension · NAMM | Pixel | NAMM combiner with edge-adaptive masking weight | ● | ◐ | ◐ |
 | 5.3 | [Zhang et al.](#53-zhang-et-al) · [📂](Zhang%20et%20al) | Subband refinement | Transform (DCT) | Parabolic LA + block-classified CM (PLAIN/EDGE/TEXTURE) | ● | ◐ | ◐ |
 | 5.4 | [Jia et al.](#54-jia-et-al) · [📂](Jia%20et%20al) | DCT formulation | Transform (DCT) | Spatio-temporal CSF with eye-movement compensation | ◐ | ◐ | — |
 | 5.5 | [Liu et al.](#55-liu-et-al) · [📂](Liu%20et%20al) | Decomposition era | Pixel | TV decomposition separating edge and texture masking | ● | ◐ | ◐ |
-| 5.6 | [Wu et al. (free energy)](#56-wu-et-al-free-energy) · [📂](Wu%20et%20al%20%28TMM%29) | Cognitive-inspired | Pixel | AR prediction splits ordered vs. disordered regions | ● | — | — |
+| 5.6 | [Wu et al. (free energy)](#56-wu-et-al-free-energy) · [📂](Wu%20et%20al%20%28TMM%29) | Cognitive-inspired | Pixel | Predicted-vs-residual split: ordered branch + disorderly residual | ● | — | — |
 | 5.7 | [Wu et al. (pattern complexity)](#57-wu-et-al-pattern-complexity) · [📂](Wu%20et%20al%20%28TIP%29) | Pattern-aware | Pixel | Orientation diversity as masking strength | ● | ◐ | ◐ |
 | 5.8 | [Jiang et al.](#58-jiang-et-al) · [📂](Jiang%20et%20al) | Top-down learning | Transform (KLT) | Data-driven CPL prediction | ● | ◐ | ◐ |
 
@@ -130,11 +130,11 @@ Every method in the library exposes the same minimal interface across all three 
 
 ```
 INPUT  : grayscale image            (uint8 / float, H × W)
-         optional config dictionary (struct in MATLAB, dict in Python, std::map in C++)
+         method-specific options    (struct in MATLAB, dict in Python, std::map in C++)
 OUTPUT : JND map of the same H × W shape (float, same range as input)
 ```
 
-A method-specific config exposes only the parameters that genuinely matter for that method (e.g. `theta` for Chou's masking, `block_size` for DCT-based methods). Default values reproduce the numbers reported in the original publication.
+The actual entry-point function name follows the reference code of each method — `JND_pixel` for Chou/Yang, `JND_dct` for Zhang, `JND_video` for Jia, `JND_ID` for Liu, `KLT_JND` for Jiang, `func_JND_modeling_pattern_complexity` for Wu (TIP), and a short script-style pipeline for Wu (TMM). Each method's subdirectory README documents its specific signature; the I/O contract above is the same throughout.
 
 This design lets you swap methods by changing a single function name — invaluable for ablations and downstream-task benchmarking.
 
@@ -149,9 +149,9 @@ For each method we give the context that motivated it, the modelling step that d
 > **Foundational pixel-domain model** · luminance adaptation + texture masking
 > 🔗 Subproject: <https://github.com/Terriao/OpenJND/tree/main/Chou%20and%20Li>
 
-The cornerstone pixel-domain JND model around which the rest of the catalogue is organised. It estimates a per-pixel visibility budget from two HVS factors — how bright the background is (luminance adaptation), and how busy the local neighbourhood is (texture masking) — and uses the maximum of the two as the local JND threshold. The companion paper also introduces **PSPNR**, a fidelity metric that ignores distortion components falling below the threshold.
+The cornerstone pixel-domain JND model around which the rest of the catalogue is organised. It estimates a per-pixel visibility budget from two HVS factors — how bright the background is (luminance adaptation), and how busy the local neighbourhood is (texture masking from the maximum weighted gradient over a 5×5 neighbourhood) — combined into a single per-pixel threshold. The companion paper also introduces **PSPNR**, a fidelity metric that ignores distortion components falling below the threshold.
 
-Behaviour of the resulting map: large budgets on dark and on busy regions; relatively conservative near isolated edges, where the max-rule tends to over-allocate.
+Behaviour of the resulting map: large budgets on dark and on busy regions; relatively conservative near isolated edges. A `'Chou'` / `'Yang'` flag in the implementation lets users switch between the bare foundational form and an edge-adaptive variant used elsewhere in the catalogue.
 
 ```bibtex
 @article{chou1995perceptually,
@@ -164,12 +164,12 @@ Behaviour of the resulting map: large budgets on dark and on busy regions; relat
 
 ### 5.2 Yang et al.
 
-> **Nonlinear additive masking (NAMM)** · YCbCr full-colour · video-aware
+> **Nonlinear additive masking (NAMM)** · edge-adaptive masking weight
 > 🔗 Subproject: <https://github.com/Terriao/OpenJND/tree/main/Yang%20et%20al>
 
-Replaces the foundational max-rule with a **nonlinear additive masking model (NAMM)**: `JND = LA + TM − C_lt · min(LA, TM)`. `C_lt` recovers the Chou–Li max-rule at `C_lt = 1` and pure addition at `C_lt = 0`; the paper sets it per channel (`C_lt_Y = 0.30`, `C_lt_Cb = 0.25`, `C_lt_Cr = 0.20`), reflecting that the Y luminance and Y texture branches share more information than the chroma branches do. Two further refinements lift the model from grayscale-still-image to colour-video: an **edge-adaptive weight map** (Canny on Y followed by a 7×7 Gaussian, σ = 0.8) suppresses the masking budget along visible edges, and a **temporal-masking** factor `f(ild)` scales the spatial JND by a bowl-shaped function of the inter-frame luminance difference.
+Replaces the foundational max-rule combiner with a **nonlinear additive masking model**: `JND = LA + TM − C_TG · min(LA, TM)`, with `C_TG = 0.3` for the Y channel — the partial-overlap regime between the foundational max-rule (`C_TG = 1`) and pure linear addition (`C_TG = 0`). An **edge-adaptive weight map** is layered onto the texture-masking term: Canny detection on the input (threshold 0.5), disk-6 morphological dilation, attenuation by 0.95, and 7×7 Gaussian smoothing (σ = 0.8) produce a mask that drops sharply along visible edges and stays near 1 elsewhere — actively suppressing the budget where distortion is most visible.
 
-Behaviour: smoother handling of edges than the foundational max-rule; recovers chroma-channel JND budget (≈2 dB additional perceptually-lossless PSNR redundancy in the paper's tests); the only model in the catalogue with both native colour and a native temporal pathway.
+Behaviour: smoother handling of edges than the foundational max-rule; the additive-with-overlap combination gives a larger budget than the max-rule where `LA` and `TM` are comparable, translating into more perceptually-lossless redundancy at matched visual quality. The OpenJND release covers the NAMM combiner and the edge-adaptive weighting on the Y channel; the per-channel chroma JND and the inter-frame temporal-masking pathway also discussed in the original paper are on the [roadmap](#roadmap).
 
 ```bibtex
 @article{yang2005just,
@@ -203,9 +203,9 @@ Behaviour: the map carries the imprint of the 8×8 block grid by construction �
 > **DCT-domain formulation** · spatio-temporal CSF · eye-movement-aware
 > 🔗 Subproject: <https://github.com/Terriao/OpenJND/tree/main/Jia%20et%20al>
 
-The first model in the catalogue designed natively in the DCT domain that the codecs themselves use. Combines **spatial and temporal contrast sensitivity functions** with corrections for the smooth-pursuit eye movements a viewer makes when tracking moving content. The output is a per-coefficient threshold map applicable to both still frames and frame pairs with motion.
+The first model in the catalogue designed natively in the DCT domain that the codecs themselves use. Combines a **spatio-temporal contrast sensitivity function** (Kelly–Daly form, with constants `c0..c4` calibrated per the paper) with **eye-movement compensation** — the retinal velocity is the image-plane velocity minus what smooth-pursuit can cancel, capped between a drift floor of 0.15 deg/s and a saccadic ceiling of 80 deg/s. The same JND framework as Zhang et al. supplies the parabolic LA branch and the PLAIN/EDGE/TEXTURE block-classified masking, so the model handles still frames and frame pairs with motion through a single code path.
 
-Behaviour: when applied to a frame pair with translation, the JND map cleanly reflects both the motion field and the underlying 8×8 block structure — a useful diagnostic property.
+Behaviour: when applied to a frame pair with translation, the JND map cleanly reflects both the motion field and the underlying 8×8 block structure — a useful diagnostic property. For still images it reduces to a spatial-CSF JND with LA and CM.
 
 ```bibtex
 @article{jia2006estimating,
@@ -218,12 +218,12 @@ Behaviour: when applied to a frame pair with translation, the JND map cleanly re
 
 ### 5.5 Liu et al.
 
-> **Decomposition era** · TV-based edge/texture separation
+> **Decomposition era** · edge / texture separation
 > 🔗 Subproject: <https://github.com/Terriao/OpenJND/tree/main/Liu%20et%20al>
 
-Earlier contrast-masking estimators tend to lump strong gradients into a single "high-frequency" bucket, so textured regions are routinely *misclassified as edges* and assigned an artificially low budget. Liu et al. propose a clean fix: split the image into a **structural component** (used for edge masking) and a **textural component** (used for texture masking) via **total-variation decomposition**, then estimate the two masking terms from the two components independently.
+Earlier contrast-masking estimators tend to lump strong gradients into a single "high-frequency" bucket, so textured regions are routinely *misclassified as edges* and assigned an artificially low budget. Liu et al. propose a clean fix: split the image into a **structural component** (used for edge masking) and a **textural component** (used for texture masking), then estimate the two masking terms from the two components independently and combine them with `W_e = 0.7`, `W_t = 1.4` so that texture masking weighs heavier than edge masking.
 
-Behaviour: textures recover their rightful, generous JND budget; edges remain protected. The cost is a non-trivial decomposition step — see the runtime section for how each language port handles it.
+Behaviour: textures recover their rightful, larger JND budget; edges remain protected. The cost is a non-trivial decomposition step — the MATLAB reference uses Wotao Yin's TV-L¹ parametric-max-flow solver (Windows-pre-compiled `.mexw64`); the Python port substitutes a Gaussian-blur surrogate to keep the dependency footprint small.
 
 ```bibtex
 @article{liu2010just,
@@ -239,7 +239,7 @@ Behaviour: textures recover their rightful, generous JND budget; edges remain pr
 > **Cognitive-inspired** · free-energy principle · ordered vs. disordered split
 > 🔗 Subproject: <https://github.com/Terriao/OpenJND/tree/main/Wu%20et%20al%20%28TMM%29>
 
-A conceptually distinct entry in the catalogue. Drawing on the free-energy framework from theoretical neuroscience, the HVS is modelled as attempting to *predict* the orderly content of an image; whatever cannot be predicted is **disordered** content that the eye tolerates much more freely. An **autoregressive predictor** over an 11×11 neighbourhood fits the image, the residual is treated as disorder, and JND is computed separately for ordered and disordered components, then combined via NAMM.
+A conceptually distinct entry in the catalogue. Drawing on the free-energy framework from theoretical neuroscience, the HVS is modelled as attempting to *predict* the orderly content of an image; whatever cannot be predicted is **disordered** content that the eye tolerates much more freely. A non-local-means reconstruction over a 21×21 search window with adaptive smoothing supplies the predicted image; the absolute residual is the free-energy map, and JND is computed separately for ordered and disordered branches, then combined via NAMM (twice).
 
 Behaviour: substantially elevated JND in disordered regions (foliage, fabric, noise), while ordered regions stay conservative. Currently MATLAB-only in this repository (see directory `Wu et al (TMM)`).
 
@@ -257,7 +257,7 @@ Behaviour: substantially elevated JND in disordered regions (foliage, fabric, no
 > **Pattern-aware** · orientation diversity
 > 🔗 Subproject: <https://github.com/Terriao/OpenJND/tree/main/Wu%20et%20al%20%28TIP%29>
 
-Contrast alone is a poor predictor of masking strength: two regions with identical contrast can mask very different amounts of distortion depending on whether their local patterns are *regular* (e.g. a brick wall) or *irregular* (e.g. crumpled fabric). **Pattern complexity** is quantified here as the *number of distinct local orientation bins* (L₀ norm of an orientation histogram, with bin width 12°) and combined with luminance contrast in a new spatial-masking estimator. Code lives in `Wu et al (TIP)`.
+Contrast alone is a poor predictor of masking strength: two regions with identical contrast can mask very different amounts of distortion depending on whether their local patterns are *regular* (e.g. a brick wall) or *irregular* (e.g. crumpled fabric). **Pattern complexity** is quantified here as the *number of distinct local orientation bins* (L₀ norm of an orientation histogram, with a 12°-wide bin) sampled over an 8-neighbour ring, and combined with a luminance-contrast transducer through a `max` dominance rule, with edge protection applied to the pattern-masking branch only. The final JND merges the luminance-adaptation and visual-masking branches via NAMM. Code lives in `Wu et al (TIP)`.
 
 Behaviour: irregular-pattern regions receive a higher JND budget than regular-pattern regions of the same contrast. A natural successor to texture-masking models for high-resolution natural imagery.
 
@@ -275,7 +275,7 @@ Behaviour: irregular-pattern regions receive a higher JND budget than regular-pa
 > **Top-down learning** · data-driven CPL prediction · KLT-domain
 > 🔗 Subproject: <https://github.com/Terriao/OpenJND/tree/main/Jiang%20et%20al>
 
-The catalogue's only *top-down* model. Instead of summing low-level masking factors, the model asks the more direct question: *at what point does distortion start to be noticed?* Subjective experiments on 500 natural images locate this **critical perceptually-lossless (CPL)** point for each image; the cumulative normalised KLT-coefficient energy at the CPL is well approximated by a Weibull distribution. For a new image, the model predicts its CPL counterpart and reports the difference map as JND.
+The catalogue's only *top-down* model. Instead of summing low-level masking factors, the model asks the more direct question: *at what point does distortion start to be noticed?* Subjective experiments on 500 natural images locate this **critical perceptually-lossless (CPL)** point for each image; the cumulative normalised KLT-coefficient energy at the CPL is well approximated by a Weibull distribution with `β = 894.16` and `η = 0.99805`. For a new image, the model predicts its CPL counterpart by inverse-KLT using only the leading components, and reports the absolute difference — multiplied by an edge-protect mask — as JND.
 
 Behaviour: low budgets near edges (where humans really do notice distortion early) and high budgets in busy textured regions — qualitatively consistent with the bottom-up models, but reached by a completely different route.
 
@@ -305,13 +305,31 @@ We deliberately do *not* report a single "winner" metric: JND maps are intermedi
 
 ## Qualitative comparison
 
-The figure below tiles the JND maps produced by all eight methods on the same `Actor` input. A few reading notes:
+<p align="center"><img src="jnd_visualization.PNG" alt="JND maps comparison" width="800"/></p>
+
+Comparing the eight maps side-by-side on the same `Actor` input makes the family-level differences immediate. A model-by-model walkthrough:
+
+- **Chou & Li (Fig. b).** The combined spatial-masking effect is reduced to the larger of two factors — luminance adaptation or texture masking. The consequence is visible along the brim of Actor's hat, where the max-rule allocates a too-generous budget at the very pixels the eye fixates on.
+
+- **Yang et al. (Fig. c).** The nonlinear additive combiner replaces the max-rule, and an explicit edge-vs-textured distinction is introduced into the masking weight. The edge-region over-allocation that Chou's map exhibits is correspondingly dampened.
+
+- **Zhang et al. (Fig. d).** The estimator moves into the DCT subband domain. Operating block-wise leaves a clearly visible 8×8 grid imprint in the JND map — a feature, not a bug, for block-based codecs that consume the map directly.
+
+- **Jia et al. (Fig. e).** A motion-aware DCT-domain estimator: with a horizontally translated second frame of Actor as input, the resulting map encodes both the per-block translation field and the same block-grid signature seen in Zhang's output, demonstrating the spatio-temporal extension at work.
+
+- **Liu et al. (Fig. f).** Splits the image into structural and textural components before computing the masking budget, and weights texture masking more strongly than edge masking. The textured regions — most clearly Actor's hair — receive a noticeably higher budget than under Yang's combiner, recovering the masking capacity that an undecomposed model under-counts.
+
+- **Wu et al. — free energy (Fig. g).** Adds a *disorder* dimension that purely contrast-based estimators miss. Ordered textures get tight budgets — the eye can read their structure — while disordered regions get loose budgets, reflecting the harder-to-resolve content that the HVS only roughly perceives.
+
+- **Wu et al. — pattern complexity (Fig. h).** Pushes the same intuition further by quantifying *pattern regularity* through local orientation diversity. Regular patterns yield mild masking; irregular ones yield strong masking, and the resulting map shows the largest budgets exactly in the irregular-pattern regions.
+
+- **Jiang et al. (Fig. i).** Sidesteps the explicit-masking-factor route entirely. The model is fit *top-down* against subjective CPL annotations, and the resulting map nevertheless agrees with the bottom-up consensus on the structure of perceptual budgets — low at edges (where distortion is easily noticed), high in textured regions — arriving there via a completely different route.
+
+A few cross-cutting takeaways:
 
 - Bottom-up pixel-domain models tend to agree on the *shape* of the map but disagree on the *amplitude* in edge and texture regions.
-- The two transform-domain bottom-up models (Zhang, Jia) carry the imprint of the underlying block grid by construction — a feature, not a bug, when the downstream consumer is a block-based codec.
-- Jiang et al.'s top-down map looks qualitatively similar to the bottom-up consensus despite being derived without explicit masking decomposition — evidence that the two philosophies converge on broadly consistent perceptual budgets.
-
-<p align="center"><img src="jnd_visualization.PNG" alt="JND maps comparison" width="800"/></p>
+- The two transform-domain bottom-up models (Zhang, Jia) carry the imprint of the underlying block grid by construction.
+- The top-down map looks qualitatively similar to the bottom-up consensus despite being derived without any explicit masking decomposition — evidence that the two philosophies converge on broadly consistent perceptual budgets.
 
 ---
 
@@ -326,13 +344,13 @@ The rankings vary across methods, which we attribute to the interaction between 
 - **Chou and Yang** — `MATLAB ≪ Python ≲ C++`. These methods rely on explicit per-pixel iteration; MATLAB's JIT vectorises them automatically, whereas our ports do not, leaving Python and C++ roughly tied at the bottom.
 - **Zhang** — `MATLAB < C++ < Python`. The bottleneck is DCT throughput. MATLAB's BLAS/MKL-backed DCT is markedly faster than SciPy's, and the C++ port sits between them by avoiding the Python interpreter overhead but lacking hand-tuned kernels.
 - **Jia** — `MATLAB ≈ Python`. The workload is evenly distributed across linear-algebra primitives that NumPy and MATLAB invoke through similarly tuned backends, so the two stacks finish within margin of each other.
-- **Liu and Jiang** — `Python ≪ C++ ≪ MATLAB`. Two different reasons converge on the same ordering. The Liu port replaces the original graph-cut decomposition with a Gaussian-blur surrogate, cutting algorithmic complexity. The Jiang port leans on heavily optimised OpenCV / NumPy primitives for PCA and convolution; the C++ port also uses OpenCV but its PCA and inner loops are not fully tuned.
+- **Liu and Jiang** — `Python ≪ C++ ≪ MATLAB`. Two different reasons converge on the same ordering. The Liu port replaces the original parametric-max-flow decomposition with a Gaussian-blur surrogate, cutting algorithmic complexity. The Jiang port leans on heavily optimised OpenCV / NumPy primitives for PCA and convolution; the C++ port also uses OpenCV but its PCA and inner loops are not fully tuned.
 - **Wu (pattern complexity)** — `Python < MATLAB < C++`. Python wins via vectorised orientation statistics; the C++ port loses ground to OpenMP synchronisation overhead and per-block dynamic allocation.
 
 Two takeaways:
 
 1. **"C++ is always fastest" is folklore.** For numerical-array workloads dominated by BLAS / DCT / image primitives, MATLAB or vectorised Python regularly beats hand-rolled C++.
-2. **Port fidelity matters as much as language.** Where we deliberately simplified a costly step (graph-cut in Liu) we say so explicitly; the numbers are honest about the trade.
+2. **Port fidelity matters as much as language.** Where we deliberately simplified a costly step (TV-L¹ in Liu) we say so explicitly; the numbers are honest about the trade.
 
 ---
 
@@ -344,10 +362,9 @@ A rough decision tree for downstream users:
 |---|---|
 | Still-image compression, codec-agnostic | Wu (pattern complexity) or Liu |
 | Block-based codec (JPEG, HEVC, AVS) | Zhang or Jia |
-| Video coding with motion compensation | Yang or Jia |
+| Video coding with motion compensation | Jia (Yang's temporal pathway is on the roadmap) |
 | Watermarking with imperceptibility constraint | Wu (free energy) or Wu (pattern complexity) |
 | IQA / perceptual quality metric design | Jiang (top-down) for alignment with subjective tests |
-| Colour-aware applications | Yang (the only catalogue entry with native YCbCr) |
 | Teaching / first reproducible baseline | Chou (the most thoroughly documented foundational model) |
 
 When in doubt, run the methods you are considering on a few of your own images and inspect the maps. Visual inspection at this stage saves a lot of downstream confusion.
@@ -369,7 +386,7 @@ Wu et al (TMM)/      # free-energy
 Jiang et al/
 ```
 
-Each method directory contains the available language ports (MATLAB / Python / C++) and a method-specific entry point.
+Each method directory contains the available language ports (MATLAB / Python / C++) and a method-specific entry point. Function names follow each method's reference code — see each subdirectory README for the exact signature.
 
 ### Clone
 
@@ -388,7 +405,7 @@ pip install numpy scipy opencv-python Pillow matplotlib
 python main.py
 ```
 
-Other Python ports follow the same pattern: open the method directory, install the standard scientific Python stack, run the entry script. Each method directory contains its own README with method-specific parameters.
+Other Python ports follow the same pattern: open the method directory, install the standard scientific Python stack, run the entry script. Each method directory contains its own README with method-specific parameters and the exact function name to call programmatically.
 
 ### MATLAB
 
@@ -396,16 +413,28 @@ Open MATLAB, navigate to a method directory, and call its top-level function. Fo
 
 ```matlab
 cd 'Chou and Li/MATLAB'
-img  = imread('../../test_data/lena.png');
-jnd  = chou_li_jnd(img);   % function name follows the method directory
+img = imread('../../test_data/lena.png');
+jnd = JND_pixel(img, 'Chou');
 imshow(mat2gray(jnd));
 ```
 
-The MATLAB ports do not depend on the Python or C++ ports — each is independently runnable.
+Function names per method:
+
+| Method | MATLAB entry point |
+|---|---|
+| Chou & Li / Yang | `JND_pixel(I, type)` |
+| Zhang | `JND_dct(I)` |
+| Jia | `JND_video(Y1, Y2)` |
+| Liu | `JND_ID(I, lambda)` |
+| Wu (TMM) | `main` (script-style pipeline) |
+| Wu (TIP) | `func_JND_modeling_pattern_complexity(img)` |
+| Jiang | `KLT_JND(im, ed_pro, L)` |
+
+The MATLAB ports do not depend on the Python or C++ ports — each is independently runnable. **A platform note:** the Liu et al. MATLAB port depends on Wotao Yin's ParaMaxFlow MEX library, currently provided pre-compiled for 64-bit Windows only; Linux / macOS users should either rebuild from the upstream source at <http://www.caam.rice.edu/~wy1/ParaMaxFlow/> or use the Python port, which carries no such dependency.
 
 ### C++
 
-C++ ports ship as zipped sources inside each method directory (e.g. `Chou and Li/C++/cpp_source.zip`). Unpack the archive and build with CMake:
+C++ ports ship as zipped sources inside each method directory. Unpack the archive and build with CMake:
 
 ```bash
 cd "Chou and Li/C++"
@@ -426,7 +455,8 @@ The fastest path to a new method is the unified interface: implement a single fu
 Suggested additions especially welcome:
 
 - Learning-based JND models (deep-network predictors, perceptual GAN-style approaches)
-- Colour-aware JND (the current catalogue is grayscale-first, with Yang et al. as the only YCbCr entry)
+- Colour-aware JND (the current catalogue is grayscale-first)
+- Native temporal-masking branches that take frame pairs without external motion estimation
 - 360-degree, light-field, or stereoscopic JND
 - Faster GPU-resident reimplementations of the transform-domain methods
 
@@ -438,7 +468,8 @@ For non-trivial contributions please open an Issue first so we can align on the 
 
 - **Continually broaden the catalogue** with learning-based JND models (deep predictors, perceptual GAN-style approaches) as the field produces them
 - Subjective validation harness (PSPNR; noise injection at the JND boundary; controlled user study scripts)
-- Colour JND extensions (CIELAB, opponent-channel masking) beyond the YCbCr branch in Yang et al.
+- Colour JND extensions — beginning with the YCbCr branch of Yang et al. and extending to CIELAB / opponent-channel masking
+- Native temporal-masking branches (Yang et al.'s `f(ild)` curve; cross-platform Linux/macOS MEX builds for Liu et al.)
 - Bridge to deep-learning IQA codebases (LPIPS, DISTS, PieAPP) for JND-weighted variants
 - Mirrored Chinese-language documentation
 - Tutorial notebooks walking through each method step by step
@@ -457,13 +488,13 @@ Because perceptual codecs and watermarking systems in active production still re
 For reproducing the numbers in the original papers, MATLAB. For integration into modern pipelines and for fully open-source dependencies, Python. C++ only when latency is the binding constraint.
 
 **Why grayscale only?**
-The classic JND literature is luminance-channel-first; sticking to grayscale keeps the comparison clean. Yang et al. is the catalogue's exception with a native YCbCr formulation; further colour-aware extensions are on the [roadmap](#roadmap).
+The classic JND literature is luminance-channel-first, and a grayscale-first catalogue keeps the comparison clean. Colour-aware extensions — starting with the YCbCr branch of Yang et al. and CIELAB-based variants — are on the [roadmap](#roadmap).
 
 **What is PSPNR and why is it not just PSNR?**
 PSPNR (introduced by Chou & Li) counts only distortion above the per-pixel JND threshold. Two images can have identical PSNR yet very different PSPNR if one hides its distortion in regions of high JND budget.
 
 **Is MATLAB required?**
-No. Every method except the MATLAB-only Wu (free energy) also has a Python implementation that runs on the open-source SciPy / NumPy / OpenCV stack.
+No. Every method except the MATLAB-only Wu (free energy) also has a Python implementation that runs on the open-source SciPy / NumPy / OpenCV stack. **A platform caveat for Liu et al.:** the MATLAB port pulls in a Windows-pre-compiled MEX library; the Python port has no such dependency and runs on all platforms.
 
 **Can I cite OpenJND independently of any specific method?**
 Yes — see [Citation](#citation). Please *also* cite the original paper for each method you use.
@@ -497,7 +528,7 @@ The repository follows standard open-source engineering practice:
 - **Open governance of the catalogue.** New methods are proposed via the *"Propose a new JND method"* issue template and discussed in the open before any code is merged.
 - **Documentation by method.** Beyond this top-level README, each method directory carries its own README explaining the implementation, parameters, and a worked example.
 
-Contributions are welcomed on any of the items listed in the [Roadmap](#roadmap), and especially on porting methods to the language slots currently marked `—` in the [Method index](#method-index).
+Contributions are welcomed on any of the items listed in the [Roadmap](#roadmap), and especially on completing the language ports currently marked `—` in the [Method index](#method-index).
 
 ---
 
