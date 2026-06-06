@@ -10,50 +10,65 @@ This directory contains the OpenJND implementation of Wu et al.'s free-energy-ba
 
 The HVS is modelled as an **internal generative mechanism (IGM)** that actively predicts the orderly content of an image and *avoids* the residual disorderly content, on the grounds that disorder carries more uncertainty than the brain can usefully process. This concealment of disorder is exactly what existing pixel-domain JND models miss — they only sum luminance adaptation and edge-based spatial masking, both of which are calibrated on orderly stimuli.
 
-The model proceeds in four steps:
+The implementation proceeds in five stages:
 
-1. **Bayesian-brain prediction via an AR model.** Each pixel `x` is predicted from its 11×11 neighbourhood `X = {x_1, …, x_120}` (the central pixel excluded). Starting from `p(x|X) ∝ p(x) · p(X|x) / p(X)` and decomposing the mutual information `I(x; X)`, the autoregressive coefficients are taken as the per-neighbour mutual information, normalised:
-
-```
-   F'(x) = Σ_{x_k ∈ X}  C_k · F(x_k) + ε,
-   C_k   = I(x; x_k) / Σ_i I(x; x_i)
-```
-
-   `F'` is the **orderly component** — the part of the image the IGM can predict.
-
-2. **Disorderly residual.** Whatever the IGM cannot predict is treated as disorder:
+1. **Orderly-content prediction.** A non-local means (NL-means) reconstruction is used as the brain's predicted image `I_ar`. For each pixel, candidate values are drawn from a `21 × 21` search window (`R = 10`), and weighted by patch similarity over a `7 × 7` patch (`r = 3`):
 
 ```
-   D = |F − F'|
+   w(p, q) = exp( −‖patch(p) − patch(q)‖² / σ(p)² )
+   I_ar(p) = Σ_q w(p, q) · I(q)  /  Σ_q w(p, q)
 ```
 
-3. **JND on the orderly component.** Because `F'` is orderly by construction, the classical pixel-domain machinery applies. Using Chou-style luminance adaptation `L_A` and Yang et al.'s spatial masking `S_M`, combined via NAMM:
+   The per-pixel adaptive `σ(p)` is set from the local luminance-adaptation threshold (lower-bounded at `min_sigma = 8`) so that smooth regions average more aggressively than busy ones.
+
+2. **Free-energy residual.** Whatever the IGM cannot predict is treated as disorder:
 
 ```
-   L_A(x) = { 17·(1 − √(B(x)/127))                    if B(x) ≤ 127
-            { (3/128)·(B(x) − 127) + 3                if B(x) > 127
-   S_M(x) = [0.01·B(x) + 11.5] · [0.01·G(x) − 1] − 12
-   JND_p(x) = L_A(x) + S_M(x) − C^{gr} · min{L_A(x), S_M(x)},   C^{gr} = 0.3
+   I_FE = | I − I_ar |
 ```
 
-   where `B(x)` is the local background luminance and `G(x)` is the maximum weighted gradient in the 5×5 neighbourhood.
+3. **JND on the orderly component (`jnd_LA + jnd_CM` via NAMM).** Two classical pixel-domain terms are evaluated on the *predicted* image `I_ar`:
 
-4. **JND from the disorderly concealment effect.** Disordered content can absorb more noise than ordered content of the same contrast, so the disorderly JND is taken proportional to the residual:
-
-```
-   JND_d(x) = α · D(x),    α = 1.125
-```
-
-5. **Overall JND.** NAMM again merges the two branches:
+   - **Luminance adaptation (`jnd_LA`):** Chou-style piecewise curve with a dark-region adjuster (`min_lum = 32`) lifting very dark backgrounds to keep `jnd_LA` finite in shadows.
 
 ```
-   JND(x) = JND_p(x) + JND_d(x) − C^{gr} · min{JND_p(x), JND_d(x)}
+     bg_jnd(L) = { 17 · (1 − √(L/127)) + 3      if L ≤ 127
+                 { (3/128) · (L − 127) + 3       if L > 127
 ```
+
+   - **Contrast masking (`jnd_CM`):** the four-direction gradient `lum_diff` is log-compressed and combined with luminance-dependent slope and intercept:
+
+```
+     lum_diff' = thre · log10(1 + lum_diff / thre) / log10(4),   thre = 80
+     jnd_CM    = | lum_diff' · α(bg) + β(bg) |
+     α(bg) = 0.0001 · bg + 0.115
+     β(bg) = 0.5 − 0.01 · bg
+```
+
+   The two are merged via NAMM:
+
+```
+   jnd_order = jnd_LA + jnd_CM − 0.3 · min( jnd_LA, jnd_CM )
+```
+
+4. **JND on the disorderly component (`jnd_disorder`).** The free-energy residual `I_FE` is taken as the starting disorder budget. In *smooth* regions (local std-deviation < 10) the budget is replaced by the smaller of `I_FE` and its `7×7` Gaussian average, to suppress single-pixel spikes. An edge-protect mask (Canny threshold 0.7, disk-2 dilation, `5 × 5` Gaussian σ = 0.8) then multiplies it down along visible edges:
+
+```
+   jnd_disorder = I_FE  ⊳  smooth_suppress  ·  edge_protect
+```
+
+5. **Final NAMM merge.** The two branches are combined the same way as in stage 3:
+
+```
+   jnd_map = jnd_order + jnd_disorder − 0.3 · min( jnd_order, jnd_disorder )
+```
+
+   Pixels within `r = 3` of the boundary are zeroed to avoid edge-padding artefacts.
 
 ## Behaviour of the JND map
 
-- Substantially elevated JND on disordered regions — foliage, fabric, water surfaces, noise patches.
-- Conservative on ordered regions — smooth gradients, regular textures, sharp edges.
+- Substantially elevated JND on disordered regions — foliage, fabric, water surfaces, noise patches — where the NL-means reconstruction cannot predict well.
+- Conservative on ordered regions — smooth gradients, regular textures, sharp edges (edge-protect zeroes the disorder contribution on edges).
 - Captures a masking phenomenon that no purely contrast-based model can reach: the *unpredictability* of local content, not just its energy, sets the budget.
 - In Wu et al.'s subjective study a JND-shaped JPEG pre-filter saved roughly 13–16% of bit rate at unchanged perceptual quality.
 
@@ -61,39 +76,63 @@ The model proceeds in four steps:
 
 ```
 Wu et al (TMM)/
-├── MATLAB/          # reference implementation
-└── paper.pdf        # original paper
+├── MATLAB/
+│   ├── main.m                       # entry-point demo on actor.png
+│   ├── demo_JND_estimation.m        # equivalent demo on 1.png
+│   ├── func_ar_predict_decomp.m     # NL-means prediction
+│   ├── func_bg_lum_jnd.m            # luminance adaptation
+│   ├── func_contrast_mask_jnd.m     # contrast masking
+│   ├── func_disorder_jnd.m          # disorder branch + edge protect
+│   ├── func_statistic_value.m       # local std-deviation
+│   └── func_randnum.m               # ±1 random matrix for noise injection demo
+└── paper.pdf
 ```
 
-> **Coverage note.** This method is currently MATLAB-only in OpenJND. Python and C++ ports are on the OpenJND roadmap; the AR-coefficient estimation step is the heaviest part of the algorithm and would benefit most from a vectorised port. Contributions are welcome — see the top-level `CONTRIBUTING.md`.
+> **Coverage note.** This method is currently MATLAB-only in OpenJND. Python and C++ ports are on the OpenJND roadmap; the NL-means prediction step is the heaviest part of the pipeline and would benefit most from a vectorised port. Contributions are welcome — see the top-level `CONTRIBUTING.md`.
 
-## Unified calling convention (MATLAB)
+## Unified calling convention
 
-```
-INPUT  : grayscale image  (uint8 / float, H × W)
-         optional config struct (alpha_dce, neighbourhood)
-OUTPUT : JND map of the same H × W shape  (float)
+The MATLAB code is organised as a sequence of helper functions rather than a single entry-point. `main.m` chains them together; calling the pipeline programmatically is a five-line affair:
+
+```matlab
+img_ar       = func_ar_predict_decomp(img0, 8);              % min_sigma = 8
+img_FE       = abs(double(img0) − double(img_ar));
+jnd_LA       = func_bg_lum_jnd(img_ar, 32);                  % min_lum = 32
+jnd_CM       = func_contrast_mask_jnd(img_ar);
+jnd_Dis      = func_disorder_jnd(img0, img_FE, 3);           % r = 3
+jnd_order    = jnd_LA + jnd_CM    − 0.3 * min(jnd_LA, jnd_CM);
+jnd_map      = jnd_order + jnd_Dis − 0.3 * min(jnd_order, jnd_Dis);
 ```
 
 ## Minimal usage example
 
 **MATLAB**
 ```matlab
-addpath('MATLAB');
-img = imread('../test_data/lena.png');
-jnd = wu_freeenergy_jnd(img);
-imshow(mat2gray(jnd));
+cd MATLAB
+addpath(genpath('.'));
+main;            % runs the full pipeline on actor.png and shows the JND mask
 ```
+
+To run on your own image, edit the `imread` line at the top of `main.m`.
 
 ## Default parameters
 
 | Parameter | Default | Meaning |
 |-----------|---------|---------|
-| `neighbourhood` | 11 × 11 | AR prediction window (central pixel excluded → 120 regressors) |
-| `α` | 1.125 | Scaling of the disorderly-concealment JND `JND_d = α · D` |
-| `C^{gr}` | 0.3 | NAMM gain-reduction factor (used twice: once inside `JND_p`, once when merging `JND_p` and `JND_d`) |
+| `R` (NL-means search) | 10 | Half-side of the search window (`21 × 21` pixels in total) |
+| `r` (NL-means patch / disorder ker) | 3 | Half-side of the patch for similarity weighting; also the Gaussian radius in the disorder branch |
+| `min_sigma` | 8 | Lower bound on the NL-means smoothing kernel `σ` |
+| `min_lum` | 32 | Dark-region floor used by `func_bg_lum_jnd` |
+| `T₀, γ` (LA) | 17, 3/128 | Chou-style luminance adaptation parameters |
+| `thre` (CM log) | 80 | Log-compression cutoff on `lum_diff` in `jnd_CM` |
+| `λ` (β intercept) | 0.5 | Constant term of `β(bg)` |
+| Smooth-region cutoff | std-dev < 10 | Threshold below which the disorder budget is replaced by `min(local_mean, I_FE)` |
+| Disorder edge Canny | 0.7 | Canny threshold inside the disorder-branch edge protect |
+| Disorder edge kernels | disk(2), 5×5 Gauss σ = 0.8 | Dilation and smoothing of the edge mask |
+| `C^{gr}` (NAMM) | 0.3 | NAMM overlap-reduction factor (used twice) |
+| `α` (noise demo) | 1 | Magnitude of the demo's JND-guided noise injection |
 
-All defaults reproduce the numbers reported in the original publication.
+All defaults reproduce the configuration used in the reference implementation.
 
 ## Citation
 
