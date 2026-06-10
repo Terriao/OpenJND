@@ -21,7 +21,7 @@
 
 ---
 
-## What this library is
+## Overview
 
 OpenJND is a **reference implementation collection** of eight representative Just-Noticeable-Difference (JND) models for visual content, made available under a single calling convention in **MATLAB**, **Python**, and **C++**.
 
