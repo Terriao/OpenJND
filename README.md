@@ -478,9 +478,6 @@ For non-trivial contributions please open an Issue first so we can align on the 
 
 ## Frequently asked questions
 
-**Do the three language implementations produce identical maps?**
-Visually equivalent, not bit-identical. Floating-point ordering, BLAS/DCT backends, and (in two cases) deliberate algorithmic simplifications introduce small differences that are documented in each subdirectory.
-
 **Why does the catalogue include foundational models alongside recent ones?**
 Because perceptual codecs and watermarking systems in active production still rely on foundational pixel-domain estimators for their simplicity, low latency, and codec-locality. JND is a domain where the newest model is rarely the right answer by default — different applications call for different generations of the lineage.
 
