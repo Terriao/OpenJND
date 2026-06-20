@@ -141,7 +141,7 @@ This design lets you swap methods by changing a single function name — invalua
 
 ## Method catalogue
 
-For each method we give the context that motivated it, the modelling step that distinguishes it from its predecessors, and a one-line characterisation of the JND map it produces. Bibliographic details are listed at the end of each entry for citation.
+For each method we give the context that motivated it, the modelling step that distinguishes it from its predecessors, and a one-line characterisation of the JND map it produces. 
 
 ### 5.1 Chou & Li
 
@@ -152,14 +152,6 @@ The cornerstone pixel-domain JND model around which the rest of the catalogue is
 
 Behaviour of the resulting map: large budgets on dark and on busy regions; relatively conservative near isolated edges. A flag in the implementation lets users switch between the bare foundational form and an edge-adaptive variant used elsewhere in the catalogue.
 
-```bibtex
-@article{chou1995perceptually,
-  title   = {A perceptually tuned subband image coder based on the measure of just-noticeable-distortion profile},
-  author  = {Chou, Chun-Hsien and Li, Yun-Chin},
-  journal = {IEEE Transactions on Circuits and Systems for Video Technology},
-  volume  = {5}, number = {6}, pages = {467--476}, year = {1995}
-}
-```
 
 ### 5.2 Yang et al.
 
@@ -170,14 +162,6 @@ Replaces the foundational max-rule combiner with a **nonlinear additive masking 
 
 Behaviour: smoother handling of edges than the foundational max-rule; the additive-with-overlap combination gives a larger budget than the max-rule where `LA` and `TM` are comparable, translating into more perceptually-lossless redundancy at matched visual quality. The OpenJND release covers the NAMM combiner and the edge-adaptive weighting on the Y channel.
 
-```bibtex
-@article{yang2005just,
-  title   = {Just noticeable distortion model and its applications in video coding},
-  author  = {Yang, Xiaokang and Lin, Weisi and Lu, Zhongkang and Ong, Ee Ping and Yao, Susu},
-  journal = {Signal Processing: Image Communication},
-  volume  = {20}, number = {7}, pages = {662--680}, year = {2005}
-}
-```
 
 ### 5.3 Zhang et al.
 
@@ -188,14 +172,6 @@ Builds on the spatial-CSF model and DCTune, and sharpens two specific weaknesses
 
 Behaviour: the map carries the imprint of the 8×8 block grid by construction — well-matched to block-based codecs, and noticeably better aligned with subjective scores than DCTune in dark regions and around object boundaries.
 
-```bibtex
-@article{zhang2005improved,
-  title   = {Improved estimation for just-noticeable visual distortion},
-  author  = {Zhang, X. H. and Lin, W. S. and Xue, P.},
-  journal = {Signal Processing},
-  volume  = {85}, number = {4}, pages = {795--808}, year = {2005}
-}
-```
 
 ### 5.4 Jia et al.
 
@@ -206,14 +182,6 @@ The first model in the catalogue designed natively in the DCT domain that the co
 
 Behaviour: when applied to a frame pair with translation, the JND map cleanly reflects both the motion field and the underlying 8×8 block structure — a useful diagnostic property. For still images it reduces to a spatial-CSF JND with LA and CM.
 
-```bibtex
-@article{jia2006estimating,
-  title   = {Estimating just-noticeable distortion for video},
-  author  = {Jia, Yuting and Lin, Weisi and Kassim, Ashraf A.},
-  journal = {IEEE Transactions on Circuits and Systems for Video Technology},
-  volume  = {16}, number = {7}, pages = {820--829}, year = {2006}
-}
-```
 
 ### 5.5 Liu et al.
 
@@ -224,14 +192,6 @@ Earlier contrast-masking estimators tend to lump strong gradients into a single 
 
 Behaviour: textures recover their rightful, larger JND budget; edges remain protected. The cost is a non-trivial decomposition step — the MATLAB reference uses Wotao Yin's TV-L¹ parametric-max-flow solver; the Python port substitutes a Gaussian-blur surrogate to keep the dependency footprint small.
 
-```bibtex
-@article{liu2010just,
-  title   = {Just noticeable difference for images with decomposition model for separating edge and textured regions},
-  author  = {Liu, Anmin and Lin, Weisi and Paul, Manoranjan and Deng, Chenwei and Zhang, Fan},
-  journal = {IEEE Transactions on Circuits and Systems for Video Technology},
-  volume  = {20}, number = {11}, pages = {1648--1652}, year = {2010}
-}
-```
 
 ### 5.6 Wu et al. (free energy)
 
@@ -242,14 +202,6 @@ A conceptually distinct entry in the catalogue. Drawing on the free-energy frame
 
 Behaviour: substantially elevated JND in disordered regions (foliage, fabric, noise), while ordered regions stay conservative.
 
-```bibtex
-@article{wu2013just,
-  title   = {Just noticeable difference estimation for images with free-energy principle},
-  author  = {Wu, Jinjian and Shi, Guangming and Lin, Weisi and Liu, Anmin and Qi, Fei},
-  journal = {IEEE Transactions on Multimedia},
-  volume  = {15}, number = {7}, pages = {1705--1710}, year = {2013}
-}
-```
 
 ### 5.7 Wu et al. (pattern complexity)
 
@@ -260,14 +212,6 @@ Contrast alone is a poor predictor of masking strength: two regions with identic
 
 Behaviour: irregular-pattern regions receive a higher JND budget than regular-pattern regions of the same contrast. A natural successor to texture-masking models for high-resolution natural imagery.
 
-```bibtex
-@article{wu2017enhanced,
-  title   = {Enhanced just noticeable difference model for images with pattern complexity},
-  author  = {Wu, Jinjian and Li, Leida and Dong, Weisheng and Shi, Guangming and Lin, Weisi and Kuo, C.-C. Jay},
-  journal = {IEEE Transactions on Image Processing},
-  volume  = {26}, number = {6}, pages = {2682--2693}, year = {2017}
-}
-```
 
 ### 5.8 Jiang et al.
 
@@ -278,14 +222,6 @@ The catalogue's only *top-down* model. Instead of summing low-level masking fact
 
 Behaviour: low budgets near edges (where humans really do notice distortion early) and high budgets in busy textured regions — qualitatively consistent with the bottom-up models, but reached by a completely different route.
 
-```bibtex
-@article{jiang2022toward,
-  title   = {Toward top-down just noticeable difference estimation of natural images},
-  author  = {Jiang, Qiuping and Liu, Zhentao and Wang, Shiqi and Shao, Feng and Lin, Weisi},
-  journal = {IEEE Transactions on Image Processing},
-  volume  = {31}, pages = {3697--3712}, year = {2022}
-}
-```
 
 ---
 
