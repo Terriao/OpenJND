@@ -58,7 +58,6 @@ INPUT  : grayscale image       (uint8 / float, H × W)
 OUTPUT : JND map of the same H × W shape (float)
 ```
 
-The `'Chou'` mode reproduces the configuration described above. The `'Yang'` mode swaps the texture-masking term for a Canny-based edge-protect variant that is reused by `Yang et al/`; pass `'Chou'` to stay within the scope of the foundational model.
 
 ## Minimal usage example
 
