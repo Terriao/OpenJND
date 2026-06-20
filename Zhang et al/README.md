@@ -16,7 +16,7 @@ t_JND(n1, n2, i, j) = tfac · t_ij(i, j) · a_lum(n1, n2) · a_CM(n1, n2, i, j),
 
 The four building blocks:
 
-1. **Spatial CSF (Ahumada–Peterson 1992).** Per-coefficient base thresholds `t_ij(i, j)` are computed from spatial frequency, orientation, and an assumed mean display luminance `LB`. The CSF parameters used by the reference implementation are the standard Ahumada–Peterson fit:
+1. **Spatial CSF.** Per-coefficient base thresholds `t_ij(i, j)` are computed from spatial frequency, orientation, and an assumed mean display luminance `LB`. The CSF parameters used by the reference implementation are the standard Ahumada–Peterson fit:
 
 ```
    LT = 13.45,  S0 = 94.7,  aT = 0.649,        % threshold lifting
