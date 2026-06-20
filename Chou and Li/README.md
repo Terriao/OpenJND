@@ -54,7 +54,7 @@ Chou and Li/
 
 ```
 INPUT  : grayscale image       (uint8 / float, H × W)
-         mode flag             ('Chou' or 'Yang')
+         mode flag
 OUTPUT : JND map of the same H × W shape (float)
 ```
 
