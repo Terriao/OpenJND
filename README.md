@@ -29,7 +29,7 @@ The library is built around three observations the field has tolerated for too l
 
 1. **JND code lives where its author put it.** Reference code typically ships as a single MATLAB folder bundled with the original publication. Re-running it later, or porting it into a Python/C++ pipeline, is each user's private headache.
 2. **There is no shared yardstick.** Different works report on different test images at different resolutions, sometimes with bespoke metrics. Reading them in sequence does not give a consistent picture of which method does what.
-3. **Method choice is complex".** Pixel-domain and transform-domain models answer different questions, and the right choice depends on the downstream task (codec, watermarking, rendering, IQA).
+3. **Method choice is complex.** Pixel-domain and transform-domain models answer different questions, and the right choice depends on the downstream task (codec, watermarking, rendering, IQA).
 
 OpenJND addresses all three by re-implementing each method against a fixed I/O contract, evaluating the eight models on the same input, and documenting both the *idea* and the *cost* of every model.
 
