@@ -472,24 +472,6 @@ For non-trivial contributions please open an Issue first so we can align on the 
 - Bridge to deep-learning IQA codebases (LPIPS, DISTS, PieAPP) for JND-weighted variants
 - Mirrored multilingualism documentation
 
----
-
-## Frequently asked questions
-
-**Why does the catalogue include foundational models alongside recent ones?**
-Because perceptual codecs and watermarking systems in active production still rely on foundational pixel-domain estimators for their simplicity, low latency, and codec-locality. JND is a domain where the newest model is rarely the right answer by default — different applications call for different generations of the lineage.
-
-**Which language should I start with?**
-For reproducing the numbers in the original papers, MATLAB. For integration into modern pipelines and for fully open-source dependencies, Python. C++ only when latency is the binding constraint.
-
-**Why grayscale only?**
-The classic JND literature is luminance-channel-first, and a grayscale-first catalogue keeps the comparison clean. Colour-aware extensions — starting with the YCbCr branch of Yang et al. and CIELAB-based variants — are on the [roadmap](#roadmap).
-
-**What is PSPNR and why is it not just PSNR?**
-PSPNR (introduced by Chou & Li) counts only distortion above the per-pixel JND threshold. Two images can have identical PSNR yet very different PSPNR if one hides its distortion in regions of high JND budget.
-
-**Can I cite OpenJND independently of any specific method?**
-Yes — see [Citation](#citation). Please *also* cite the original paper for each method you use.
 
 ---
 
