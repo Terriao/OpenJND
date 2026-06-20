@@ -169,7 +169,7 @@ Behaviour of the resulting map: large budgets on dark and on busy regions; relat
 
 Replaces the foundational max-rule combiner with a **nonlinear additive masking model**: `JND = LA + TM − C_TG · min(LA, TM)`, with `C_TG = 0.3` for the Y channel — the partial-overlap regime between the foundational max-rule (`C_TG = 1`) and pure linear addition (`C_TG = 0`). An **edge-adaptive weight map** is layered onto the texture-masking term: Canny detection on the input (threshold 0.5), disk-6 morphological dilation, attenuation by 0.95, and 7×7 Gaussian smoothing (σ = 0.8) produce a mask that drops sharply along visible edges and stays near 1 elsewhere — actively suppressing the budget where distortion is most visible.
 
-Behaviour: smoother handling of edges than the foundational max-rule; the additive-with-overlap combination gives a larger budget than the max-rule where `LA` and `TM` are comparable, translating into more perceptually-lossless redundancy at matched visual quality. The OpenJND release covers the NAMM combiner and the edge-adaptive weighting on the Y channel; the per-channel chroma JND and the inter-frame temporal-masking pathway also discussed in the original paper are on the [roadmap](#roadmap).
+Behaviour: smoother handling of edges than the foundational max-rule; the additive-with-overlap combination gives a larger budget than the max-rule where `LA` and `TM` are comparable, translating into more perceptually-lossless redundancy at matched visual quality. The OpenJND release covers the NAMM combiner and the edge-adaptive weighting on the Y channel.
 
 ```bibtex
 @article{yang2005just,
