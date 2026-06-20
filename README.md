@@ -465,13 +465,12 @@ For non-trivial contributions please open an Issue first so we can align on the 
 
 ## Roadmap
 
-- **Continually broaden the catalogue** with learning-based JND models (deep predictors, perceptual GAN-style approaches) as the field produces them
+- **Continually broaden the catalogue** with learning-based JND models as the field produces them
 - Subjective validation harness (PSPNR; noise injection at the JND boundary; controlled user study scripts)
 - Colour JND extensions — beginning with the YCbCr branch of Yang et al. and extending to CIELAB / opponent-channel masking
 - Native temporal-masking branches (Yang et al.'s `f(ild)` curve; cross-platform Linux/macOS MEX builds for Liu et al.)
 - Bridge to deep-learning IQA codebases (LPIPS, DISTS, PieAPP) for JND-weighted variants
-- Mirrored Chinese-language documentation
-- Tutorial notebooks walking through each method step by step
+- Mirrored multilingualism documentation
 
 ---
 
