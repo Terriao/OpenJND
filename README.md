@@ -142,7 +142,7 @@ This design lets you swap methods by changing a single function name — invalua
 
 ## Method catalogue
 
-For each method we give the context that motivated it, the modelling step that distinguishes it from its predecessors, and a one-line characterisation of the JND map it produces. Bibliographic details (including publication year) are listed at the end of each entry for citation.
+For each method we give the context that motivated it, the modelling step that distinguishes it from its predecessors, and a one-line characterisation of the JND map it produces. Bibliographic details are listed at the end of each entry for citation.
 
 ### 5.1 Chou & Li
 
