@@ -53,12 +53,11 @@ OpenJND addresses all three by re-implementing each method against a fixed I/O c
 10. [Getting started](#getting-started)
 11. [Extending the library](#extending-the-library)
 12. [Roadmap](#roadmap)
-13. [Frequently asked questions](#frequently-asked-questions)
-14. [Citation](#citation)
-15. [Community](#community)
-16. [License](#license)
-17. [Acknowledgements](#acknowledgements)
-18. [Contributors and contact](#contributors-and-contact)
+13. [Citation](#citation)
+14. [Community](#community)
+15. [License](#license)
+16. [Acknowledgements](#acknowledgements)
+17. [Contributors and contact](#contributors-and-contact)
 
 ---
 
