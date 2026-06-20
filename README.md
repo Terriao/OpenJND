@@ -299,7 +299,7 @@ To keep the comparison reproducible:
 - **Visualisation.** A single image — grayscale `Actor` (512 × 512) — is shown for every method, side by side, so the reader can compare maps at a glance.
 - **Defaults.** Every method is run with the parameter settings reported in its original publication.
 
-We deliberately do *not* report a single "winner" metric: JND maps are intermediate signals, and the right yardstick depends on the downstream application (compression bitrate, watermark robustness, IQA correlation, …).
+We do *not* report a single "winner" metric: JND maps are intermediate signals, and the right yardstick depends on the downstream application (compression bitrate, watermark robustness, IQA correlation, …).
 
 ---
 
