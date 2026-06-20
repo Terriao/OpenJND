@@ -241,7 +241,7 @@ Behaviour: textures recover their rightful, larger JND budget; edges remain prot
 
 A conceptually distinct entry in the catalogue. Drawing on the free-energy framework from theoretical neuroscience, the HVS is modelled as attempting to *predict* the orderly content of an image; whatever cannot be predicted is **disordered** content that the eye tolerates much more freely. A non-local-means reconstruction over a 21×21 search window with adaptive smoothing supplies the predicted image; the absolute residual is the free-energy map, and JND is computed separately for ordered and disordered branches, then combined via NAMM (twice).
 
-Behaviour: substantially elevated JND in disordered regions (foliage, fabric, noise), while ordered regions stay conservative. Currently MATLAB-only in this repository (see directory `Wu et al (TMM)`).
+Behaviour: substantially elevated JND in disordered regions (foliage, fabric, noise), while ordered regions stay conservative.
 
 ```bibtex
 @article{wu2013just,
