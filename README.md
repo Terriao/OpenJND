@@ -458,7 +458,6 @@ Suggested additions especially welcome:
 - Colour-aware JND (the current catalogue is grayscale-first)
 - Native temporal-masking branches that take frame pairs without external motion estimation
 - 360-degree, light-field, or stereoscopic JND
-- Faster GPU-resident reimplementations of the transform-domain methods
 
 For non-trivial contributions please open an Issue first so we can align on the interface and integration. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow.
 
