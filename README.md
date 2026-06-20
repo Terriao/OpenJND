@@ -103,7 +103,7 @@ Pattern-aware           →  Wu et al. (pattern complexity)  (orientation divers
 Top-down learning       →  Jiang et al.          (data-driven CPL boundary)
 ```
 
-The lineage is **converging, not branching**: later models do not invalidate earlier ones, they sharpen specific aspects. Several state-of-the-art codecs in production today still call into Chou-style or Zhang-style estimators for their simplicity and codec-locality, while research pipelines combine them with the cognitive- and pattern-aware refinements. OpenJND ships all generations so the user can pick the right tool, not the most recent one.
+The lineage is **converging, not branching**: later models do not invalidate earlier ones, they sharpen specific aspects. Several state-of-the-art method still call into Chou-style or Zhang-style estimators for their simplicity, while research pipelines combine them with the cognitive- and pattern-aware refinements. OpenJND ships all generations so the user can pick the right tool.
 
 ---
 
