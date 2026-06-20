@@ -151,7 +151,7 @@ For each method we give the context that motivated it, the modelling step that d
 
 The cornerstone pixel-domain JND model around which the rest of the catalogue is organised. It estimates a per-pixel visibility budget from two HVS factors — how bright the background is (luminance adaptation), and how busy the local neighbourhood is (texture masking from the maximum weighted gradient over a 5×5 neighbourhood) — combined into a single per-pixel threshold. The companion paper also introduces **PSPNR**, a fidelity metric that ignores distortion components falling below the threshold.
 
-Behaviour of the resulting map: large budgets on dark and on busy regions; relatively conservative near isolated edges. A `'Chou'` / `'Yang'` flag in the implementation lets users switch between the bare foundational form and an edge-adaptive variant used elsewhere in the catalogue.
+Behaviour of the resulting map: large budgets on dark and on busy regions; relatively conservative near isolated edges. A flag in the implementation lets users switch between the bare foundational form and an edge-adaptive variant used elsewhere in the catalogue.
 
 ```bibtex
 @article{chou1995perceptually,
